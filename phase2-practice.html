@@ -1,0 +1,381 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>빌드에서 배포까지</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#f5f7fb; --surface:#ffffff; --surface-2:#eef1f8;
+    --ink:#101a30; --ink-dim:#5b6780; --line:#dde3ee;
+    --accent:#2f5fd6; --accent-ink:#1c3d94; --accent-soft:#e6edfc;
+    --teal:#0e8f82; --teal-soft:#e2f5f2;
+    --warn:#b4720f; --warn-soft:#fbf0dd;
+    --shadow: 0 1px 2px rgba(16,26,48,0.04), 0 8px 24px rgba(16,26,48,0.06);
+    --term-bg:#0d1220; --term-ink:#e6ecff; --term-dim:#7686b8; --term-line:#232c47;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1220; --surface:#121b2e; --surface-2:#182339;
+      --ink:#e8edf8; --ink-dim:#93a1c0; --line:#26324c;
+      --accent:#7fa2ff; --accent-ink:#bccdff; --accent-soft:#1b2848;
+      --teal:#4fd3c4; --teal-soft:#12302c;
+      --warn:#e0ad5f; --warn-soft:#3a2e15;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1220; --surface:#121b2e; --surface-2:#182339;
+    --ink:#e8edf8; --ink-dim:#93a1c0; --line:#26324c;
+    --accent:#7fa2ff; --accent-ink:#bccdff; --accent-soft:#1b2848;
+    --teal:#4fd3c4; --teal-soft:#12302c;
+    --warn:#e0ad5f; --warn-soft:#3a2e15;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"IBM Plex Sans KR","IBM Plex Sans",system-ui,sans-serif;
+    padding:0 20px; padding-block:40px;
+  }
+  img{ max-width:100%; }
+  [hidden]{ display:none!important; }
+  .wrap{ max-width:820px; margin:0 auto; }
+  h1,h2{ font-family:"Manrope",system-ui,sans-serif; text-wrap:balance; margin:0; }
+
+  .eyebrow{
+    font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.08em;
+    color:var(--accent-ink); text-transform:uppercase; margin:0 0 10px;
+  }
+  h1{ font-size:clamp(24px,4vw,32px); font-weight:800; line-height:1.3; }
+  .sub{ margin-top:10px; color:var(--ink-dim); font-size:15px; line-height:1.65; max-width:62ch; }
+
+  .state-bar{
+    margin-top:22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:var(--teal-soft); border:1px solid var(--line); border-radius:12px;
+    padding:12px 16px; font-size:13.5px; color:var(--ink);
+  }
+  .state-bar .dot{ width:8px; height:8px; border-radius:50%; background:var(--teal); flex-shrink:0; box-shadow:0 0 0 3px color-mix(in srgb, var(--teal) 25%, transparent); }
+  .state-bar b{ font-family:"IBM Plex Mono",monospace; font-weight:500; }
+
+  .progress-row{ margin-top:18px; display:flex; align-items:center; gap:12px; }
+  .progress-track{ flex:1; height:8px; border-radius:999px; background:var(--surface-2); overflow:hidden; border:1px solid var(--line); }
+  .progress-fill{ height:100%; background:linear-gradient(90deg,var(--accent),var(--teal)); width:0%; transition:width .3s ease; }
+  #progressNum{ font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--accent-ink); white-space:nowrap; }
+
+  .timeline{ margin-top:36px; }
+  .step{ display:grid; grid-template-columns:44px 1fr; gap:16px; position:relative; padding-bottom:30px; }
+  .step:last-child{ padding-bottom:0; }
+  .rail{ display:flex; flex-direction:column; align-items:center; }
+  .rail .dot{
+    width:34px; height:34px; border-radius:9px; background:var(--accent-soft); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-family:"IBM Plex Mono",monospace;
+    font-weight:500; font-size:13px; color:var(--accent-ink); flex-shrink:0; transition:background .2s, color .2s;
+  }
+  .step.done .rail .dot{ background:var(--teal); color:#fff; border-color:var(--teal); }
+  .rail .line{ width:2px; flex:1; background:var(--line); margin-top:6px; }
+  .step:last-child .rail .line{ display:none; }
+
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); }
+  .card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .card h2{ font-size:17px; font-weight:700; }
+  .done-toggle{ display:flex; align-items:center; gap:6px; font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-dim); cursor:pointer; user-select:none; white-space:nowrap; }
+  .done-toggle input{ accent-color:var(--teal); width:14px; height:14px; }
+
+  .goal{ margin-top:6px; color:var(--ink-dim); font-size:13.5px; line-height:1.6; }
+
+  .term{
+    margin-top:14px; background:var(--term-bg); border-radius:10px; overflow:hidden;
+    border:1px solid var(--term-line);
+  }
+  .term .bar{ display:flex; gap:6px; padding:9px 12px; border-bottom:1px solid var(--term-line); }
+  .term .bar span{ width:9px; height:9px; border-radius:50%; background:#42506f; }
+  .term pre{
+    margin:0; padding:12px 16px 14px; font-family:"IBM Plex Mono",monospace; font-size:13px;
+    color:var(--term-ink); line-height:1.7; overflow-x:auto; white-space:pre;
+  }
+  .term .c{ color:#6fcf97; }
+  .term .comment{ color:var(--term-dim); }
+  .term .file{ color:#e8c15a; }
+
+  .explain{
+    margin-top:14px; border-left:3px solid var(--accent); background:var(--accent-soft);
+    padding:12px 15px; border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; color:var(--ink);
+  }
+  .explain b.tag{ display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em;
+    text-transform:uppercase; color:var(--accent-ink); margin-bottom:6px; }
+  .explain ol, .explain ul{ margin:8px 0 0; padding-left:18px; }
+  .explain li{ margin-bottom:3px; }
+  .explain code{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .warn-box{
+    margin-top:14px; border-left:3px solid var(--warn); background:var(--warn-soft);
+    padding:12px 15px; border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; color:var(--ink);
+  }
+  .warn-box b.tag{ display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em;
+    text-transform:uppercase; color:var(--warn); margin-bottom:6px; }
+  .warn-box code{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .check{
+    margin-top:12px; display:flex; gap:8px; font-size:13px; color:var(--ink-dim);
+    background:var(--surface-2); border-radius:8px; padding:9px 12px;
+  }
+  .check b{ color:var(--teal); font-family:"IBM Plex Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.04em; flex-shrink:0; }
+
+  footer{ margin-top:44px; padding-top:22px; border-top:1px solid var(--line); font-size:13px; color:var(--ink-dim); line-height:1.7; }
+
+  @media (max-width:560px){
+    body{ padding-block:28px; }
+    .step{ grid-template-columns:34px 1fr; gap:10px; }
+    .rail .dot{ width:28px; height:28px; font-size:11px; }
+    .card-head{ flex-direction:column; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">02단계 실습</p>
+    <h1>빌드에서 배포까지</h1>
+    <p class="sub">간단한 Vite + React 앱을 실제로 빌드하고, Docker 이미지로 만들고, kind 클러스터 안에 배포해서 브라우저로 접속하기까지의 전 과정입니다. 특히 "로컬에서 빌드한 이미지가 왜 클러스터에서 안 보이는지" 같은, 실전에서 누구나 한 번은 겪는 함정을 짚고 넘어갑니다.</p>
+
+    <div class="state-bar">
+      <span class="dot"></span>
+      전제 조건: 01단계에서 만든 <b>kind-kind</b> 클러스터(control-plane 1 + worker 2)가 살아있어야 합니다. <code style="font-family:'IBM Plex Mono',monospace;font-size:12px;">kubectl get nodes</code>로 먼저 확인하세요.
+    </div>
+
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <span id="progressNum">0 / 9</span>
+    </div>
+  </header>
+
+  <div class="timeline" id="timeline">
+
+    <div class="step" data-step="1">
+      <div class="rail"><div class="dot">1</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>예제 앱 만들기</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">배포 대상이 될 최소한의 React 앱을 스캐폴딩합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> npm create vite@latest frontend-practice -- --template react
+<span class="c">$</span> cd frontend-practice
+<span class="c">$</span> npm install</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          평소 하던 그대로입니다 — 로컬 개발 환경을 만드는 단계라 k8s와는 아직 무관합니다. <code>npm/yarn/pnpm</code> 뭘 쓰셔도 무방하며, 이후 명령어의 <code>npm</code>만 대응되게 바꾸면 됩니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="2">
+      <div class="rail"><div class="dot">2</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>프로덕션 빌드로 배포물 확인</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">우리가 실제로 배포할 대상은 소스코드가 아니라 이 빌드 결과물입니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> npm run build
+<span class="c">$</span> ls dist</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>dist/</code>에 해시가 붙은 정적 HTML/CSS/JS 파일들이 생깁니다. 이 폴더 안의 파일들이 앞으로 만들 컨테이너 이미지의 실체입니다 — <b>k8s는 React나 Vite를 전혀 모릅니다</b>. k8s 입장에서는 그냥 "정적 파일을 서빙하는 컨테이너 하나"일 뿐입니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="3">
+      <div class="rail"><div class="dot">3</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>Dockerfile 작성 (멀티스테이지)</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">빌드 환경과 서빙 환경을 분리해서, 최종 이미지에 node_modules가 남지 않게 합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="file"># Dockerfile</span>
+<span class="comment"># --- 1단계: 빌드 전용, 이 레이어는 최종 이미지에 남지 않음 ---</span>
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+<span class="comment"># --- 2단계: 실제로 배포되는 이미지 ---</span>
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>FROM</code>이 두 번 나오는 게 핵심입니다.
+          <ol>
+            <li><b>1단계(build)</b>: node 이미지 안에서 <code>npm ci</code> + <code>npm run build</code>를 실행 — 이 단계의 파일시스템(node_modules 포함)은 통째로 임시로만 존재합니다.</li>
+            <li><b>2단계(nginx)</b>: <code>COPY --from=build</code>로 1단계의 <code>/app/dist</code> 폴더만 쏙 뽑아와서 nginx 이미지 위에 얹습니다. node, npm, node_modules는 전부 버려집니다.</li>
+          </ol>
+          결과적으로 최종 이미지는 <b>nginx + 정적 파일</b>뿐이라 용량이 훨씬 작고, 빌드 도구가 배포 환경에 남아있지 않아 더 안전합니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="4">
+      <div class="rail"><div class="dot">4</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>이미지 빌드</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">Dockerfile을 실제 이미지로 만듭니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> docker build -t frontend-practice:v1 .
+<span class="c">$</span> docker images | grep frontend-practice</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          Docker 데몬이 Dockerfile을 한 줄씩 실행해서 이미지를 만들고, <b>맥 호스트의 Docker 이미지 저장소</b>에 `frontend-practice:v1`이라는 이름(태그)으로 저장합니다. 아직 kind 클러스터와는 아무 관련이 없습니다 — 다음 단계에서 이게 왜 문제가 되는지 나옵니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="5">
+      <div class="rail"><div class="dot">5</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>이미지를 kind 클러스터로 전달</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">이번 실습에서 가장 중요한 함정 — 방금 만든 이미지는 클러스터에서 아직 보이지 않습니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kind load docker-image frontend-practice:v1 --name kind</pre></div>
+        <div class="warn-box">
+          <b class="tag">왜 이 단계가 필요한가</b>
+          지난번에 확인했듯 kind의 노드는 각각 독립된 Docker 컨테이너이고, 그 안에서 <b>containerd가 자기만의 별도 이미지 저장소</b>를 갖고 있습니다. 방금 <code>docker build</code>로 만든 이미지는 <b>맥 호스트의 Docker 저장소</b>에만 있지, <code>kind-worker</code> 컨테이너 내부의 containerd는 그 이미지의 존재 자체를 모릅니다. 그래서 이 단계 없이 바로 배포하면 <code>ErrImageNeverPull</code> 또는 <code>ImagePullBackOff</code> 에러가 납니다 — 레지스트리에서 받아오려고 시도하다 실패하는 것도 아니고, 애초에 로컬에서도 못 찾는 것뿐입니다.
+        </div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>kind load docker-image</code>는 내부적으로 이미지를 <code>docker save</code>로 tar 스트림을 뽑아서, 각 노드 컨테이너 안으로 흘려보낸 뒤 그 노드의 containerd가 <code>import</code>하게 만듭니다. 레지스트리 없이 로컬 클러스터에 이미지를 직접 꽂아 넣는 kind만의 방법입니다.
+        </div>
+        <div class="check"><b>확인</b> <code>docker exec kind-worker crictl images | grep frontend-practice</code> — 노드 내부 containerd의 이미지 목록에 잡히는지 직접 확인해보세요.</div>
+      </div>
+    </div>
+
+    <div class="step" data-step="6">
+      <div class="rail"><div class="dot">6</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>Deployment로 배포</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">01단계와 같은 패턴, 이미지만 우리가 만든 것으로 바꿉니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="file"># frontend-deployment.yaml</span>
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-practice
+  labels:
+    app: frontend-practice
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-practice
+  template:
+    metadata:
+      labels:
+        app: frontend-practice
+    spec:
+      containers:
+        - name: frontend
+          image: frontend-practice:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+
+<span class="c">$</span> kubectl apply -f frontend-deployment.yaml
+<span class="c">$</span> kubectl get pods -l app=frontend-practice</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>imagePullPolicy: IfNotPresent</code>를 명시한 게 포인트입니다. 기본값은 태그가 <code>:latest</code>면 <code>Always</code>(매번 레지스트리 확인), 그 외 태그(우리처럼 <code>:v1</code>)면 원래 <code>IfNotPresent</code>라 사실 안 적어도 동작하지만, 명시적으로 적어두면 "이건 로컬에만 있는 이미지라 레지스트리에서 새로 받아오면 안 된다"는 의도가 코드에 그대로 드러납니다. 이걸 안 지키고 실수로 <code>:latest</code>를 쓰면, k8s가 매번 원격 레지스트리에서 같은 이름의 이미지를 찾으려다 실패합니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="7">
+      <div class="rail"><div class="dot">7</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>Service로 안정적인 주소 만들기</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">방금 배운 Service 개념을 실제로 적용합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="file"># frontend-service.yaml</span>
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend-practice
+  ports:
+    - port: 80
+      targetPort: 80
+
+<span class="c">$</span> kubectl apply -f frontend-service.yaml
+<span class="c">$</span> kubectl get endpoints frontend-service</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>spec.selector</code>가 Deployment의 Pod 라벨과 같은 <code>app: frontend-practice</code>를 가리킵니다. Service가 만들어지는 즉시, 그 라벨을 가진 현재 Pod 2개의 IP가 자동으로 <b>Endpoints</b> 오브젝트에 채워집니다. <code>get endpoints</code>로 그 IP 목록이 실제로 채워졌는지 바로 확인할 수 있습니다 — 이게 Service가 "지금 살아있는 Pod들"을 실시간으로 추적하고 있다는 증거입니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="8">
+      <div class="rail"><div class="dot">8</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>브라우저로 접속 확인</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">이번엔 Pod가 아니라 Service를 통해 접속합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl port-forward service/frontend-service 8080:80
+<span class="comment"># 다른 터미널/브라우저에서:</span>
+<span class="c">$</span> curl localhost:8080</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          01단계에서는 <code>pod/nginx-test</code>로 특정 Pod 하나에 직접 터널을 뚫었지만, 이번엔 <code>service/frontend-service</code>로 뚫었습니다. Service를 통하면 그 뒤에 Pod가 몇 개든(지금은 2개), Pod가 재배치되든 상관없이 <b>같은 주소로 항상 접속</b>됩니다. Vite 앱의 기본 화면이 그대로 브라우저에 뜨면 성공입니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="9">
+      <div class="rail"><div class="dot">9</div></div>
+      <div class="card">
+        <div class="card-head"><h2>정리</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">클러스터를 깨끗하게 되돌립니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl delete -f frontend-service.yaml -f frontend-deployment.yaml</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          한 파일이 아니라 <code>-f</code>를 두 번 써서 여러 매니페스트를 한 번에 지울 수 있습니다. Deployment가 지워지면 지난번처럼 ReplicaSet과 Pod까지 연쇄적으로 정리되고, Service는 별도 오브젝트라 따로 지정해줘야 같이 사라집니다.
+        </div>
+        <div class="check"><b>확인</b> <code>kubectl get all -l app=frontend-practice</code> 결과가 비어있으면 02단계 완료입니다.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <code>ImagePullBackOff</code>나 <code>ErrImageNeverPull</code>이 뜨면 십중팔구 5단계(<code>kind load docker-image</code>)를 빼먹은 경우입니다. <code>kubectl describe pod &lt;이름&gt;</code>의 Events에서 정확한 에러 메시지를 확인해보세요.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var KEY = 'k8s-phase2-progress-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.step-check'));
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { state = {}; }
+
+  function update(){
+    var total = boxes.length;
+    var checked = boxes.filter(function(b){ return b.checked; }).length;
+    document.getElementById('progressNum').textContent = checked + ' / ' + total;
+    document.getElementById('progressFill').style.width = (total ? (checked/total*100) : 0) + '%';
+  }
+
+  boxes.forEach(function(b, i){
+    var id = 'step-' + i;
+    if (state[id]) { b.checked = true; b.closest('.step').classList.add('done'); }
+    b.addEventListener('change', function(){
+      state[id] = b.checked;
+      b.closest('.step').classList.toggle('done', b.checked);
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+      update();
+    });
+  });
+  update();
+})();
+</script>
+</body>
+</html>

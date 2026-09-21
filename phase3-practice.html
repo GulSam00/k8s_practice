@@ -1,0 +1,451 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>설정에서 라우팅까지</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#f5f7fb; --surface:#ffffff; --surface-2:#eef1f8;
+    --ink:#101a30; --ink-dim:#5b6780; --line:#dde3ee;
+    --accent:#2f5fd6; --accent-ink:#1c3d94; --accent-soft:#e6edfc;
+    --teal:#0e8f82; --teal-soft:#e2f5f2;
+    --warn:#b4720f; --warn-soft:#fbf0dd;
+    --danger:#c23b3b; --danger-soft:#fbe9e9;
+    --shadow: 0 1px 2px rgba(16,26,48,0.04), 0 8px 24px rgba(16,26,48,0.06);
+    --term-bg:#0d1220; --term-ink:#e6ecff; --term-dim:#7686b8; --term-line:#232c47;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1220; --surface:#121b2e; --surface-2:#182339;
+      --ink:#e8edf8; --ink-dim:#93a1c0; --line:#26324c;
+      --accent:#7fa2ff; --accent-ink:#bccdff; --accent-soft:#1b2848;
+      --teal:#4fd3c4; --teal-soft:#12302c;
+      --warn:#e0ad5f; --warn-soft:#3a2e15;
+      --danger:#f0908f; --danger-soft:#3a1c1c;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1220; --surface:#121b2e; --surface-2:#182339;
+    --ink:#e8edf8; --ink-dim:#93a1c0; --line:#26324c;
+    --accent:#7fa2ff; --accent-ink:#bccdff; --accent-soft:#1b2848;
+    --teal:#4fd3c4; --teal-soft:#12302c;
+    --warn:#e0ad5f; --warn-soft:#3a2e15;
+    --danger:#f0908f; --danger-soft:#3a1c1c;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"IBM Plex Sans KR","IBM Plex Sans",system-ui,sans-serif;
+    padding:0 20px; padding-block:40px;
+  }
+  img{ max-width:100%; }
+  [hidden]{ display:none!important; }
+  .wrap{ max-width:820px; margin:0 auto; }
+  h1,h2{ font-family:"Manrope",system-ui,sans-serif; text-wrap:balance; margin:0; }
+
+  .eyebrow{
+    font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.08em;
+    color:var(--accent-ink); text-transform:uppercase; margin:0 0 10px;
+  }
+  h1{ font-size:clamp(24px,4vw,32px); font-weight:800; line-height:1.3; }
+  .sub{ margin-top:10px; color:var(--ink-dim); font-size:15px; line-height:1.65; max-width:62ch; }
+
+  .state-bar{
+    margin-top:22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:var(--teal-soft); border:1px solid var(--line); border-radius:12px;
+    padding:12px 16px; font-size:13.5px; color:var(--ink);
+  }
+  .state-bar .dot{ width:8px; height:8px; border-radius:50%; background:var(--teal); flex-shrink:0; box-shadow:0 0 0 3px color-mix(in srgb, var(--teal) 25%, transparent); }
+  .state-bar code{ font-family:"IBM Plex Mono",monospace; font-size:12px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .progress-row{ margin-top:18px; display:flex; align-items:center; gap:12px; }
+  .progress-track{ flex:1; height:8px; border-radius:999px; background:var(--surface-2); overflow:hidden; border:1px solid var(--line); }
+  .progress-fill{ height:100%; background:linear-gradient(90deg,var(--accent),var(--teal)); width:0%; transition:width .3s ease; }
+  #progressNum{ font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--accent-ink); white-space:nowrap; }
+
+  .timeline{ margin-top:36px; }
+  .step{ display:grid; grid-template-columns:44px 1fr; gap:16px; position:relative; padding-bottom:30px; }
+  .step:last-child{ padding-bottom:0; }
+  .rail{ display:flex; flex-direction:column; align-items:center; }
+  .rail .dot{
+    width:34px; height:34px; border-radius:9px; background:var(--accent-soft); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-family:"IBM Plex Mono",monospace;
+    font-weight:500; font-size:13px; color:var(--accent-ink); flex-shrink:0; transition:background .2s, color .2s;
+  }
+  .step.done .rail .dot{ background:var(--teal); color:#fff; border-color:var(--teal); }
+  .rail .line{ width:2px; flex:1; background:var(--line); margin-top:6px; }
+  .step:last-child .rail .line{ display:none; }
+
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); }
+  .card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .card h2{ font-size:17px; font-weight:700; }
+  .done-toggle{ display:flex; align-items:center; gap:6px; font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-dim); cursor:pointer; user-select:none; white-space:nowrap; }
+  .done-toggle input{ accent-color:var(--teal); width:14px; height:14px; }
+
+  .goal{ margin-top:6px; color:var(--ink-dim); font-size:13.5px; line-height:1.6; }
+
+  .term{ margin-top:14px; background:var(--term-bg); border-radius:10px; overflow:hidden; border:1px solid var(--term-line); }
+  .term .bar{ display:flex; gap:6px; padding:9px 12px; border-bottom:1px solid var(--term-line); }
+  .term .bar span{ width:9px; height:9px; border-radius:50%; background:#42506f; }
+  .term pre{ margin:0; padding:12px 16px 14px; font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--term-ink); line-height:1.7; overflow-x:auto; white-space:pre; }
+  .term .c{ color:#6fcf97; }
+  .term .comment{ color:var(--term-dim); }
+  .term .file{ color:#e8c15a; }
+
+  .explain{ margin-top:14px; border-left:3px solid var(--accent); background:var(--accent-soft); padding:12px 15px; border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .explain b.tag{ display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:6px; }
+  .explain ol, .explain ul{ margin:8px 0 0; padding-left:18px; }
+  .explain li{ margin-bottom:3px; }
+  .explain code{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .warn-box{ margin-top:14px; border-left:3px solid var(--warn); background:var(--warn-soft); padding:12px 15px; border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .warn-box b.tag{ display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--warn); margin-bottom:6px; }
+  .warn-box code{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .danger-box{ margin-top:14px; border-left:3px solid var(--danger); background:var(--danger-soft); padding:12px 15px; border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .danger-box b.tag{ display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--danger); margin-bottom:6px; }
+  .danger-box code{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .check{ margin-top:12px; display:flex; gap:8px; font-size:13px; color:var(--ink-dim); background:var(--surface-2); border-radius:8px; padding:9px 12px; }
+  .check b{ color:var(--teal); font-family:"IBM Plex Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.04em; flex-shrink:0; }
+
+  footer{ margin-top:44px; padding-top:22px; border-top:1px solid var(--line); font-size:13px; color:var(--ink-dim); line-height:1.7; }
+
+  @media (max-width:560px){
+    body{ padding-block:28px; }
+    .step{ grid-template-columns:34px 1fr; gap:10px; }
+    .rail .dot{ width:28px; height:28px; font-size:11px; }
+    .card-head{ flex-direction:column; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">03단계 실습</p>
+    <h1>설정에서 라우팅까지</h1>
+    <p class="sub">ConfigMap/Secret으로 설정을 주입하고, 하나의 진입점에서 경로별로 서로 다른 서비스로 트래픽을 나누는 Ingress까지 만들어봅니다. SPA 특유의 "런타임 env 주입" 문제와, kind에는 Ingress 컨트롤러가 기본으로 없다는 함정도 함께 다룹니다.</p>
+
+    <div class="state-bar">
+      <span class="dot"></span>
+      전제 조건: 02단계의 <code>frontend-practice</code> Deployment/Service가 살아있어야 합니다. <code>kubectl get deploy,svc frontend-practice</code>로 먼저 확인하세요.
+    </div>
+
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <span id="progressNum">0 / 8</span>
+    </div>
+  </header>
+
+  <div class="timeline" id="timeline">
+
+    <div class="step" data-step="1">
+      <div class="rail"><div class="dot">1</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>ConfigMap 만들기</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">환경별로 달라질 수 있는 값을 이미지 밖으로 분리합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="file"># frontend-configmap.yaml</span>
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+data:
+  API_BASE_URL: "http://backend-mock-service/api"
+
+<span class="c">$</span> kubectl apply -f frontend-configmap.yaml
+<span class="c">$</span> kubectl get configmap frontend-config -o yaml</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          ConfigMap은 그 자체로는 아무것도 하지 않는 **단순 key-value 저장소**입니다. etcd에 저장될 뿐이고, 아직 어떤 Pod에도 연결되지 않았습니다. 다음 단계에서 이 값을 Pod 안으로 실제로 주입합니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="2">
+      <div class="rail"><div class="dot">2</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>SPA에 런타임으로 값 주입하기</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">이번 실습에서 가장 중요한 함정 — ConfigMap을 연결해도 화면엔 반영이 안 되는 이유를 해결합니다.</p>
+        <div class="warn-box">
+          <b class="tag">왜 문제가 되나</b>
+          Vite는 <code>import.meta.env.VITE_*</code> 값을 <b>빌드 시점에 JS 번들 안에 그대로 박아버립니다</b>. 02단계에서 만든 <code>frontend-practice:v1</code> 이미지는 이미 빌드가 끝난 정적 파일이라, 컨테이너를 실행할 때 환경변수를 아무리 넣어줘도 이미 번들된 JS 코드는 절대 바뀌지 않습니다. 백엔드 서버라면 <code>process.env</code>를 매 요청마다 읽으니 문제없지만, 정적 파일을 서빙하는 SPA는 구조가 다릅니다.
+        </div>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="file"># inject-env.sh</span>
+#!/bin/sh
+set -e
+cat &lt;&lt;EOF &gt; /usr/share/nginx/html/env.js
+window.__ENV__ = {
+  API_BASE_URL: "${API_BASE_URL}"
+};
+EOF
+
+<span class="comment"># Dockerfile의 2단계(nginx)에 추가</span>
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY inject-env.sh /docker-entrypoint.d/40-inject-env.sh
+RUN chmod +x /docker-entrypoint.d/40-inject-env.sh
+EXPOSE 80</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나 — 낯익은 로그였을 겁니다</b>
+          nginx 공식 이미지는 컨테이너가 시작될 때 <code>/docker-entrypoint.d/</code> 안의 실행 가능한 스크립트들을 nginx를 띄우기 <b>직전에</b> 순서대로 실행해주는 기능이 내장돼 있습니다. 사실 01단계에서 <code>kubectl logs nginx-test</code>를 처음 봤을 때 이미 이 문구를 보셨습니다:
+          <pre style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:6px;font-size:12px;white-space:pre-wrap;">/docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/</pre>
+          그때는 그냥 지나쳤던 그 메커니즘을 지금 직접 활용하는 겁니다. 컨테이너가 켜질 때마다 이 스크립트가 **그 순간의 환경변수 값**으로 <code>env.js</code> 파일을 새로 생성하고, Vite의 <code>index.html</code>(프로젝트 루트, <code>dist</code> 안이 아님)에 미리 이 줄을 추가해두면:
+          <pre style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:6px;font-size:12px;">&lt;script src="/env.js"&gt;&lt;/script&gt;</pre>
+          번들 JS가 로드되기 전에 <code>window.__ENV__</code>가 먼저 채워집니다. 빌드는 한 번만 하고, **이미지는 그대로 두고 환경마다 다른 ConfigMap만 바꿔 끼우는 식**으로 재사용할 수 있게 됩니다.
+        </div>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="comment"># frontend-deployment.yaml의 containers 아래 추가</span>
+      containers:
+        - name: frontend
+          image: frontend-practice:v2
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: frontend-config
+          ports:
+            - containerPort: 80
+
+<span class="c">$</span> docker build -t frontend-practice:v2 .
+<span class="c">$</span> kind load docker-image frontend-practice:v2 --name kind
+<span class="c">$</span> kubectl apply -f frontend-deployment.yaml</pre></div>
+        <div class="check"><b>확인</b> <code>kubectl exec deploy/frontend-practice -- cat /usr/share/nginx/html/env.js</code>로 실제 값이 채워졌는지 확인해보세요.</div>
+      </div>
+    </div>
+
+    <div class="step" data-step="3">
+      <div class="rail"><div class="dot">3</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>Secret — "암호화"가 아니라는 것 직접 확인</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">이름 때문에 생기는 흔한 오해를 실습으로 깹니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="file"># frontend-secret.yaml</span>
+apiVersion: v1
+kind: Secret
+metadata:
+  name: frontend-secret
+type: Opaque
+stringData:
+  API_KEY: "practice-secret-value-1234"
+
+<span class="c">$</span> kubectl apply -f frontend-secret.yaml
+<span class="c">$</span> kubectl get secret frontend-secret -o yaml</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>stringData</code>로 넣은 평문이 저장되면서 <b>Base64로 인코딩</b>됩니다. 결과 YAML의 <code>data.API_KEY</code> 필드에 이상한 문자열이 보일 텐데, 이건 암호화된 값이 아니라 그냥 인코딩된 값입니다 — 누구나 즉시 원복할 수 있습니다.
+        </div>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl get secret frontend-secret -o jsonpath='{.data.API_KEY}' | base64 -d</pre></div>
+        <div class="danger-box">
+          <b class="tag">프론트엔드 개발자가 특히 조심할 점</b>
+          Secret 자체는 etcd 접근 권한이 없는 사람에게는 숨겨지지만, 이걸 2단계에서 만든 <code>env.js</code> 패턴처럼 프론트엔드 컨테이너의 런타임 값으로 주입하면 <b>브라우저가 다운로드해서 실행하는 JS 파일 안에 그대로 노출</b>됩니다. 누구든 "페이지 소스 보기"로 볼 수 있습니다. Secret은 <b>백엔드에서만 쓰는 값(DB 비밀번호, 서버 간 API 키 등)</b>에 쓰는 것이지, 프론트엔드 컨테이너로 흘러들어가는 값을 보호해주는 장치가 아닙니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="4">
+      <div class="rail"><div class="dot">4</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>가짜 백엔드 만들기 (ConfigMap을 파일로 마운트)</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">Ingress의 경로 분기를 보여주려면 서로 다른 서비스가 두 개 필요합니다. 이번엔 ConfigMap을 env가 아니라 파일로 붙여봅니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="file"># backend-mock.yaml</span>
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-mock-html
+data:
+  index.html: |
+    {"message": "hello from backend-mock"}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-mock
+  labels:
+    app: backend-mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-mock
+  template:
+    metadata:
+      labels:
+        app: backend-mock
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+          ports:
+            - containerPort: 80
+      volumes:
+        - name: html
+          configMap:
+            name: backend-mock-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-mock-service
+spec:
+  selector:
+    app: backend-mock
+  ports:
+    - port: 80
+
+<span class="c">$</span> kubectl apply -f backend-mock.yaml</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나 — env vs 파일 마운트</b>
+          2단계에서는 ConfigMap을 <code>envFrom</code>으로 **환경변수**로 붙였다면, 이번엔 <code>volumes.configMap</code> + <code>volumeMounts</code>로 **파일**로 붙였습니다. ConfigMap의 각 key(<code>index.html</code>)가 그대로 마운트 경로 안의 파일 이름이 됩니다. 이미지 안에 아무 파일도 없는 순정 <code>nginx:alpine</code>이지만, 이 마운트 덕분에 우리가 원하는 응답을 반환하는 "가짜 백엔드" 역할을 하게 됩니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="5">
+      <div class="rail"><div class="dot">5</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>Ingress 컨트롤러 설치</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">kind에는 Ingress 컨트롤러가 기본으로 없다는 걸 먼저 확인합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl get pods -A | grep ingress
+<span class="comment"># → 아무것도 안 나옴</span></pre></div>
+        <div class="warn-box">
+          <b class="tag">왜 이 단계가 필요한가</b>
+          지금까지 만든 <code>Ingress</code> 오브젝트는 사실 "이렇게 라우팅해줘"라는 <b>선언일 뿐, 그 자체로는 트래픽을 처리하지 않습니다</b>. 이 선언을 읽고 실제로 프록시 역할을 해줄 <b>컨트롤러</b>가 클러스터에 따로 떠 있어야 합니다. kind는 이걸 기본 설치해주지 않으므로 직접 설치해야 합니다.
+        </div>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+<span class="c">$</span> kubectl wait --namespace ingress-nginx \
+    --for=condition=ready pod \
+    --selector=app.kubernetes.io/component=controller \
+    --timeout=120s</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>ingress-nginx</code>라는 새 네임스페이스에 컨트롤러 Deployment/Service가 설치됩니다. 이름이 헷갈릴 수 있는데, 이건 우리가 지금까지 쓴 "정적 파일 서빙용 nginx"와는 **다른 역할**입니다 — 이 nginx는 <code>Ingress</code> 오브젝트를 watch하다가, 규칙이 바뀔 때마다 자기 내부 설정을 자동으로 고쳐 쓰는 **리버스 프록시**입니다. <code>wait</code> 명령은 컨트롤러 Pod가 완전히 준비될 때까지 기다려주는 것 — 설치 직후엔 아직 Running이 아닐 수 있습니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="6">
+      <div class="rail"><div class="dot">6</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>Ingress 규칙 작성</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">경로에 따라 서로 다른 Service로 트래픽을 나눕니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="file"># frontend-ingress.yaml</span>
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Exact
+            backend:
+              service:
+                name: backend-mock-service
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
+
+<span class="c">$</span> kubectl apply -f frontend-ingress.yaml
+<span class="c">$</span> kubectl get ingress frontend-ingress</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>rules[].http.paths</code>가 경로별 분기표입니다. <code>/api</code>(정확히 일치)로 오는 요청은 <code>backend-mock-service</code>로, 그 외 <code>/</code>로 시작하는 모든 요청(Prefix)은 <code>frontend-service</code>로 갑니다. <code>rewrite-target: /</code> 어노테이션이 중요한데, 이게 없으면 컨트롤러가 <code>/api</code> 경로 그대로 백엔드에 전달해서 (백엔드엔 <code>index.html</code> 파일 하나뿐이라) 404가 납니다. 이 어노테이션이 실제 전달 직전에 경로를 <code>/</code>로 바꿔주기 때문에 백엔드가 정상 응답합니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="7">
+      <div class="rail"><div class="dot">7</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>접속 테스트</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">같은 포트, 다른 경로로 서로 다른 서비스에 도달하는 걸 직접 확인합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl port-forward -n ingress-nginx service/ingress-nginx-controller 8080:80
+<span class="comment"># 다른 터미널에서:</span>
+<span class="c">$</span> curl localhost:8080/
+<span class="c">$</span> curl localhost:8080/api</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          이번엔 <code>frontend-service</code>나 <code>backend-mock-service</code>가 아니라 <b>Ingress 컨트롤러의 Service</b>로 포트포워딩했습니다. 같은 <code>localhost:8080</code>인데:
+          <ul>
+            <li><code>curl localhost:8080/</code> → Vite 빌드 결과(<code>title: frontend-practice</code>)</li>
+            <li><code>curl localhost:8080/api</code> → <code>{"message": "hello from backend-mock"}</code></li>
+          </ul>
+          진입점은 하나인데 경로에 따라 완전히 다른 Pod 그룹으로 갈라지는 것 — 이게 Service 하나만으로는 못 하던 것(Service는 동질적인 Pod 그룹 하나만 가리킴)이고, Ingress가 추가로 해주는 일입니다.
+        </div>
+        <div class="check"><b>확인</b> 두 응답이 서로 다르게 나오면 성공입니다.</div>
+      </div>
+    </div>
+
+    <div class="step" data-step="8">
+      <div class="rail"><div class="dot">8</div></div>
+      <div class="card">
+        <div class="card-head"><h2>정리</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">이번 단계에서 만든 것들을 정리합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl delete -f frontend-ingress.yaml
+<span class="c">$</span> kubectl delete -f backend-mock.yaml
+<span class="c">$</span> kubectl delete -f frontend-secret.yaml -f frontend-configmap.yaml
+<span class="comment"># Ingress 컨트롤러 자체까지 지우고 싶다면(선택):</span>
+<span class="c">$</span> kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          02단계의 <code>frontend-practice</code> Deployment/Service는 그대로 남겨둡니다 — 다음 단계(파이프라인 자동화)에서 계속 쓸 대상입니다. Ingress 컨트롤러는 이후 단계에서 또 쓸 수 있어서 지우지 않고 놔둬도 무방합니다.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <code>curl localhost:8080/api</code>가 404를 반환하면 대부분 <code>rewrite-target</code> 어노테이션이 빠졌거나 <code>pathType</code>이 잘못된 경우입니다. <code>kubectl describe ingress frontend-ingress</code>로 규칙이 제대로 등록됐는지, <code>kubectl logs -n ingress-nginx deploy/ingress-nginx-controller</code>로 실제로 어떤 경로로 라우팅했는지 확인해보세요.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var KEY = 'k8s-phase3-progress-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.step-check'));
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { state = {}; }
+
+  function update(){
+    var total = boxes.length;
+    var checked = boxes.filter(function(b){ return b.checked; }).length;
+    document.getElementById('progressNum').textContent = checked + ' / ' + total;
+    document.getElementById('progressFill').style.width = (total ? (checked/total*100) : 0) + '%';
+  }
+
+  boxes.forEach(function(b, i){
+    var id = 'step-' + i;
+    if (state[id]) { b.checked = true; b.closest('.step').classList.add('done'); }
+    b.addEventListener('change', function(){
+      state[id] = b.checked;
+      b.closest('.step').classList.toggle('done', b.checked);
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+      update();
+    });
+  });
+  update();
+})();
+</script>
+</body>
+</html>

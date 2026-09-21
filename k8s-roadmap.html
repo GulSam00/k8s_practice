@@ -1,0 +1,473 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>쿠버네티스 온보딩 항로</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#f5f7fb;
+    --surface:#ffffff;
+    --surface-2:#eef1f8;
+    --ink:#101a30;
+    --ink-dim:#5b6780;
+    --line:#dde3ee;
+    --accent:#2f5fd6;
+    --accent-ink:#1c3d94;
+    --accent-soft:#e6edfc;
+    --teal:#0e8f82;
+    --teal-soft:#e2f5f2;
+    --amber:#b4720f;
+    --amber-soft:#fbf0dd;
+    --shadow: 0 1px 2px rgba(16,26,48,0.04), 0 8px 24px rgba(16,26,48,0.06);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1220;
+      --surface:#121b2e;
+      --surface-2:#182339;
+      --ink:#e8edf8;
+      --ink-dim:#93a1c0;
+      --line:#26324c;
+      --accent:#7fa2ff;
+      --accent-ink:#bccdff;
+      --accent-soft:#1b2848;
+      --teal:#4fd3c4;
+      --teal-soft:#12302c;
+      --amber:#e0ad5f;
+      --amber-soft:#3a2e15;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1220;
+    --surface:#121b2e;
+    --surface-2:#182339;
+    --ink:#e8edf8;
+    --ink-dim:#93a1c0;
+    --line:#26324c;
+    --accent:#7fa2ff;
+    --accent-ink:#bccdff;
+    --accent-soft:#1b2848;
+    --teal:#4fd3c4;
+    --teal-soft:#12302c;
+    --amber:#e0ad5f;
+    --amber-soft:#3a2e15;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; }
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans KR", "IBM Plex Sans", system-ui, sans-serif;
+    padding: 0 20px;
+    padding-block: 40px;
+  }
+  img{ max-width:100%; }
+  [hidden]{ display:none!important; }
+
+  .wrap{ max-width: 880px; margin: 0 auto; }
+
+  h1,h2,h3{ font-family:"Manrope", system-ui, sans-serif; text-wrap: balance; margin:0; }
+  .mono{ font-family:"IBM Plex Mono", monospace; }
+
+  header.top{ margin-bottom: 28px; }
+  .eyebrow{
+    font-family:"IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--accent-ink);
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+  h1{ font-size: clamp(26px, 4vw, 34px); font-weight: 800; color: var(--ink); line-height:1.25; }
+  .sub{ margin-top:10px; color: var(--ink-dim); font-size:15px; line-height:1.65; max-width: 62ch; }
+
+  .stat-row{
+    display:flex; gap:12px; flex-wrap:wrap; margin-top:20px;
+  }
+  .stat{
+    background: var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:12px 16px; flex: 1 1 140px; box-shadow: var(--shadow);
+  }
+  .stat .num{ font-family:"IBM Plex Mono",monospace; font-size:20px; font-weight:500; color:var(--accent-ink); font-variant-numeric: tabular-nums; }
+  .stat .lbl{ font-size:12px; color:var(--ink-dim); margin-top:2px; }
+
+  .progress-track{
+    margin-top:14px; height:8px; border-radius:999px; background: var(--surface-2);
+    overflow:hidden; border:1px solid var(--line);
+  }
+  .progress-fill{
+    height:100%; background: linear-gradient(90deg, var(--accent), var(--teal));
+    width:0%; transition: width .3s ease;
+  }
+
+  /* prerequisite box */
+  .prereq{
+    margin-top:28px; background: var(--amber-soft); border:1px solid var(--line);
+    border-radius:14px; padding:18px 20px;
+  }
+  .prereq .ptitle{ font-weight:700; font-size:14px; color:var(--amber); display:flex; align-items:center; gap:8px; }
+  .prereq p{ margin:8px 0 0; color: var(--ink-dim); font-size:14px; line-height:1.6; }
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .chip{
+    font-family:"IBM Plex Mono",monospace; font-size:12px; padding:4px 10px;
+    border-radius:999px; background: var(--surface); border:1px solid var(--line); color: var(--ink-dim);
+  }
+
+  /* timeline */
+  .timeline{ margin-top: 40px; position: relative; }
+  .phase{
+    display:grid; grid-template-columns: 56px 1fr; gap:18px; position:relative; padding-bottom: 36px;
+  }
+  .phase:last-child{ padding-bottom:0; }
+  .rail{
+    position:relative; display:flex; flex-direction:column; align-items:center;
+  }
+  .rail .dot{
+    width:40px; height:40px; border-radius:10px; background: var(--accent-soft); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-family:"IBM Plex Mono",monospace; font-weight:500; font-size:14px; color: var(--accent-ink);
+    flex-shrink:0;
+  }
+  .phase.optional .rail .dot{ background: var(--surface-2); color: var(--ink-dim); }
+  .rail .line{
+    width:2px; flex:1; background: var(--line); margin-top:6px;
+  }
+  .phase:last-child .rail .line{ display:none; }
+
+  .card{
+    background: var(--surface); border:1px solid var(--line); border-radius:16px;
+    padding:20px 22px; box-shadow: var(--shadow);
+  }
+  .card-head{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .card h2{ font-size:19px; font-weight:700; color:var(--ink); }
+  .duration{
+    font-family:"IBM Plex Mono",monospace; font-size:12px; color: var(--ink-dim);
+    background: var(--surface-2); padding:3px 9px; border-radius:999px; white-space:nowrap;
+  }
+  .goal{ margin-top:8px; color: var(--ink-dim); font-size:14.5px; line-height:1.6; }
+
+  .concepts{ margin-top:14px; }
+  .concepts .label{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:6px; }
+  .concept-list{ display:flex; gap:6px; flex-wrap:wrap; }
+  .concept-list span{
+    font-family:"IBM Plex Mono",monospace; font-size:12px; padding:3px 9px; border-radius:6px;
+    background: var(--accent-soft); color: var(--accent-ink);
+  }
+
+  .fe-tip{
+    margin-top:14px; border-left:3px solid var(--teal); background: var(--teal-soft);
+    padding:10px 14px; border-radius: 0 8px 8px 0; font-size:13.5px; line-height:1.6; color: var(--ink);
+  }
+  .fe-tip b{ color: var(--teal); font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.04em; text-transform:uppercase; display:block; margin-bottom:4px; }
+
+  .hands-on{
+    margin-top:16px; border:1px dashed color-mix(in srgb, var(--accent) 50%, var(--line));
+    border-radius:10px; padding:12px 14px; background: var(--accent-soft);
+  }
+  .hands-on .label{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-ink); font-weight:600; margin-bottom:6px; }
+  .hands-on p{ margin:0; font-size:14px; line-height:1.6; color: var(--ink); }
+  .hands-on code{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; background: var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  ul.res{ list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:6px; }
+  ul.res li{ font-size:13.5px; }
+  ul.res label{ display:flex; align-items:flex-start; gap:8px; cursor:pointer; color: var(--ink-dim); }
+  ul.res input[type="checkbox"]{ margin-top:3px; accent-color: var(--accent); width:14px; height:14px; flex-shrink:0; }
+  ul.res a{ color: var(--ink); text-decoration:none; border-bottom:1px solid var(--line); }
+  ul.res a:hover{ border-color: var(--accent); color: var(--accent-ink); }
+  ul.res label.checked span.txt{ color: var(--ink-dim); text-decoration: line-through; text-decoration-color: var(--line); }
+
+  footer{
+    margin-top:48px; padding-top:24px; border-top:1px solid var(--line);
+  }
+  footer h3{ font-size:14px; color: var(--ink-dim); text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+  footer ul{ margin:12px 0 0; padding:0; list-style:none; display:grid; grid-template-columns: repeat(2,1fr); gap:8px 24px; }
+  footer li{ font-size:13.5px; }
+  footer a{ color: var(--ink); text-decoration:none; border-bottom:1px solid var(--line); }
+  footer a:hover{ color: var(--accent-ink); border-color: var(--accent); }
+  footer .note{ margin-top:18px; font-size:12.5px; color: var(--ink-dim); line-height:1.6; }
+
+  @media (max-width: 560px){
+    body{ padding-block: 28px; }
+    .phase{ grid-template-columns: 40px 1fr; gap:12px; }
+    .rail .dot{ width:32px; height:32px; font-size:12px; }
+    footer ul{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">Frontend → Kubernetes</p>
+    <h1>쿠버네티스 온보딩 항로</h1>
+    <p class="sub">이미 Docker, CI/CD, 환경변수, 리버스 프록시를 다뤄본 프론트엔드 개발자를 위한 경로입니다. 익숙한 개념을 k8s 용어로 다시 연결하면서, "직접 배포해보는 것"을 목표로 구성했습니다.</p>
+
+    <div class="stat-row">
+      <div class="stat"><div class="num">6</div><div class="lbl">단계 (선택 1개 포함)</div></div>
+      <div class="stat"><div class="num">~3–4주</div><div class="lbl">파트타임 학습 기준</div></div>
+      <div class="stat"><div class="num" id="progressNum">0%</div><div class="lbl">현재 진행률</div></div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </header>
+
+  <div class="prereq">
+    <div class="ptitle">00 · 사전 점검 — 컨테이너 기초</div>
+    <p>k8s는 "이미 컨테이너화된 앱을 어떻게 운영할 것인가"를 다루는 도구입니다. 아래가 이미 익숙하다면 바로 01단계로 넘어가세요.</p>
+    <div class="chip-row">
+      <span class="chip">image vs container</span>
+      <span class="chip">Dockerfile</span>
+      <span class="chip">docker build / run</span>
+      <span class="chip">docker-compose</span>
+      <span class="chip">이미지 레지스트리</span>
+    </div>
+  </div>
+
+  <div class="timeline">
+
+    <!-- Phase 01 -->
+    <div class="phase">
+      <div class="rail"><div class="dot">01</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head">
+          <h2>클러스터의 마인드 모델</h2>
+          <span class="duration">2–3일</span>
+        </div>
+        <p class="goal">"컨테이너 하나 실행"이 아니라 "여러 컨테이너를 원하는 상태로 계속 유지시키는 시스템"이라는 관점으로 전환합니다.</p>
+
+        <div class="concepts">
+          <div class="label">핵심 개념</div>
+          <div class="concept-list">
+            <span>Pod</span><span>Deployment</span><span>ReplicaSet</span><span>Namespace</span><span>kubectl</span><span>선언적 YAML</span>
+          </div>
+        </div>
+
+        <div class="fe-tip">
+          <b>프론트엔드 관점</b>
+          Deployment는 <span class="mono">package.json</span>의 의존성 선언과 비슷합니다 — "이 상태여야 한다"를 선언하면 k8s가 실제 상태를 그쪽으로 계속 맞춰줍니다. npm이 노드모듈을 관리하듯, k8s는 컨테이너를 관리합니다.
+        </div>
+
+        <div class="hands-on">
+          <div class="label">실습</div>
+          <p><code>kubectl</code> CLI를 설치하고, <code>kubectl run</code>으로 nginx Pod 하나를 띄운 뒤 <code>kubectl get pods</code>, <code>kubectl describe pod</code>, <code>kubectl logs</code>로 상태를 관찰해보세요. Pod를 지웠을 때 Deployment가 자동으로 새 Pod를 만드는 것도 확인합니다.</p>
+        </div>
+
+        <ul class="res">
+          <li><label><input type="checkbox" data-id="p1-r1"><span class="txt"><a href="https://kubernetes.io/docs/tutorials/kubernetes-basics/" target="_blank" rel="noopener">Kubernetes Basics 튜토리얼</a> (kubernetes.io)</span></label></li>
+          <li><label><input type="checkbox" data-id="p1-r2"><span class="txt"><a href="https://kubernetes.io/docs/concepts/workloads/pods/" target="_blank" rel="noopener">Pods 공식 개념 문서</a></span></label></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Phase 02 -->
+    <div class="phase">
+      <div class="rail"><div class="dot">02</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head">
+          <h2>내 앱을 클러스터에 올리기</h2>
+          <span class="duration">3–4일</span>
+        </div>
+        <p class="goal">로컬 클러스터를 띄우고, 빌드된 프론트엔드 정적 파일을 실제로 배포해봅니다.</p>
+
+        <div class="concepts">
+          <div class="label">핵심 개념</div>
+          <div class="concept-list">
+            <span>minikube / kind</span><span>Deployment 스펙</span><span>Service (ClusterIP)</span><span>port-forward</span>
+          </div>
+        </div>
+
+        <div class="fe-tip">
+          <b>프론트엔드 관점</b>
+          <code class="mono">npm run build</code> 결과물을 nginx 베이스 이미지에 넣어 Docker 이미지로 만들고, 그 이미지를 Deployment로 배포합니다. 로컬 dev server 대신 nginx가 정적 파일을 서빙하는 구조로 바뀐다고 생각하면 됩니다.
+        </div>
+
+        <div class="hands-on">
+          <div class="label">실습</div>
+          <p>React/Vue 앱을 빌드 → nginx 기반 Dockerfile 작성 → 이미지 빌드 → minikube에 배포 → Service로 노출 → <code>kubectl port-forward</code>로 브라우저에서 확인.</p>
+        </div>
+
+        <ul class="res">
+          <li><label><input type="checkbox" data-id="p2-r1"><span class="txt"><a href="https://minikube.sigs.k8s.io/docs/start/" target="_blank" rel="noopener">minikube 설치 가이드</a></span></label></li>
+          <li><label><input type="checkbox" data-id="p2-r2"><span class="txt"><a href="https://kind.sigs.k8s.io/docs/user/quick-start/" target="_blank" rel="noopener">kind Quick Start</a> (대안: 더 가벼움)</span></label></li>
+          <li><label><input type="checkbox" data-id="p2-r3"><span class="txt"><a href="https://kubernetes.io/docs/concepts/services-networking/service/" target="_blank" rel="noopener">Service 공식 문서</a></span></label></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Phase 03 -->
+    <div class="phase">
+      <div class="rail"><div class="dot">03</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head">
+          <h2>설정과 트래픽</h2>
+          <span class="duration">3–4일</span>
+        </div>
+        <p class="goal">환경별 설정 주입 방식과, 외부에서 들어오는 트래픽을 라우팅하는 방법을 익힙니다.</p>
+
+        <div class="concepts">
+          <div class="label">핵심 개념</div>
+          <div class="concept-list">
+            <span>ConfigMap</span><span>Secret</span><span>Ingress</span><span>Service 타입 (NodePort/LB)</span>
+          </div>
+        </div>
+
+        <div class="fe-tip">
+          <b>프론트엔드 관점</b>
+          SPA는 이미 빌드 시점에 env가 번들에 박히는 경우가 많아, "런타임에 ConfigMap으로 env 주입"이 기대와 다르게 동작할 수 있습니다. 런타임에 값이 필요하면 <code class="mono">entrypoint</code> 스크립트가 컨테이너 시작 시 <code class="mono">window.__ENV__</code> 같은 파일을 생성하는 패턴을 함께 봐두세요.
+        </div>
+
+        <div class="hands-on">
+          <div class="label">실습</div>
+          <p>ConfigMap으로 API 엔드포인트 값을 주입하고, Ingress로 <code>/api</code>는 백엔드 Service, <code>/</code>는 프론트엔드 Service로 라우팅되도록 구성합니다.</p>
+        </div>
+
+        <ul class="res">
+          <li><label><input type="checkbox" data-id="p3-r1"><span class="txt"><a href="https://kubernetes.io/docs/concepts/configuration/configmap/" target="_blank" rel="noopener">ConfigMap 공식 문서</a></span></label></li>
+          <li><label><input type="checkbox" data-id="p3-r2"><span class="txt"><a href="https://kubernetes.io/docs/concepts/services-networking/ingress/" target="_blank" rel="noopener">Ingress 공식 문서</a></span></label></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Phase 04 -->
+    <div class="phase">
+      <div class="rail"><div class="dot">04</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head">
+          <h2>파이프라인 자동화</h2>
+          <span class="duration">4–5일</span>
+        </div>
+        <p class="goal">YAML을 손으로 매번 적용하는 대신, 패키징하고 CI/CD로 자동 배포하는 흐름을 만듭니다.</p>
+
+        <div class="concepts">
+          <div class="label">핵심 개념</div>
+          <div class="concept-list">
+            <span>Helm</span><span>이미지 태깅/레지스트리 푸시</span><span>GitHub Actions</span><span>GitOps (ArgoCD)</span>
+          </div>
+        </div>
+
+        <div class="fe-tip">
+          <b>프론트엔드 관점</b>
+          Helm 차트는 "설정 가능한 npm 패키지"에 가깝습니다 — <code class="mono">values.yaml</code>로 환경별(dev/staging/prod) 오버라이드를 주는 구조가 <code class="mono">.env.production</code>과 비슷한 역할을 합니다.
+        </div>
+
+        <div class="hands-on">
+          <div class="label">실습</div>
+          <p>지금까지 만든 리소스를 Helm 차트로 묶고, GitHub Actions에서 이미지 빌드 → 레지스트리 푸시 → 차트 버전업까지 자동화해봅니다.</p>
+        </div>
+
+        <ul class="res">
+          <li><label><input type="checkbox" data-id="p4-r1"><span class="txt"><a href="https://helm.sh/docs/intro/quickstart/" target="_blank" rel="noopener">Helm Quickstart</a></span></label></li>
+          <li><label><input type="checkbox" data-id="p4-r2"><span class="txt"><a href="https://argo-cd.readthedocs.io/en/stable/" target="_blank" rel="noopener">Argo CD 공식 문서</a> (GitOps 개념 파악용)</span></label></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Phase 05 -->
+    <div class="phase">
+      <div class="rail"><div class="dot">05</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head">
+          <h2>운영, 디버깅, 스케일링</h2>
+          <span class="duration">3–4일</span>
+        </div>
+        <p class="goal">배포 후 "잘 떠 있는지, 문제가 생기면 어떻게 파악하는지"를 익힙니다.</p>
+
+        <div class="concepts">
+          <div class="label">핵심 개념</div>
+          <div class="concept-list">
+            <span>livenessProbe</span><span>readinessProbe</span><span>resource requests/limits</span><span>HPA</span><span>kubectl exec</span>
+          </div>
+        </div>
+
+        <div class="fe-tip">
+          <b>프론트엔드 관점</b>
+          Ingress 뒤에서 5xx가 뜨면 "브라우저 개발자도구"가 아니라 <code class="mono">kubectl describe pod</code>와 <code class="mono">kubectl logs</code>가 새로운 devtools입니다. probe 설정이 잘못되면 정상 동작 중인 Pod도 계속 재시작되니 가장 먼저 확인하는 습관을 들이세요.
+        </div>
+
+        <div class="hands-on">
+          <div class="label">실습</div>
+          <p>nginx에 헬스체크 경로를 추가하고 probe를 연결, resource limit을 낮게 잡아 OOMKilled를 직접 발생시켜본 뒤 로그로 원인을 추적합니다.</p>
+        </div>
+
+        <ul class="res">
+          <li><label><input type="checkbox" data-id="p5-r1"><span class="txt"><a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/" target="_blank" rel="noopener">Probe 설정 가이드</a></span></label></li>
+          <li><label><input type="checkbox" data-id="p5-r2"><span class="txt"><a href="https://kodekloud.com/" target="_blank" rel="noopener">KodeKloud 실습 랩</a> (디버깅 시나리오 다수)</span></label></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Phase 06 optional -->
+    <div class="phase optional">
+      <div class="rail"><div class="dot">선택</div></div>
+      <div class="card">
+        <div class="card-head">
+          <h2>더 깊이 (필요할 때)</h2>
+          <span class="duration">지속적</span>
+        </div>
+        <p class="goal">프론트엔드 배포에는 필수가 아니지만, 조직 규모가 커지면 마주치는 주제들입니다.</p>
+        <div class="concepts">
+          <div class="label">핵심 개념</div>
+          <div class="concept-list">
+            <span>RBAC</span><span>NetworkPolicy</span><span>Service Mesh</span><span>멀티 클러스터</span>
+          </div>
+        </div>
+        <ul class="res">
+          <li><label><input type="checkbox" data-id="p6-r1"><span class="txt"><a href="https://killer.sh/" target="_blank" rel="noopener">killer.sh</a> — CKA 스타일 실전 문제로 전체 복습</span></label></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <h3>참고 자료</h3>
+    <ul>
+      <li><a href="https://kubernetes.io/docs/home/" target="_blank" rel="noopener">Kubernetes 공식 문서</a></li>
+      <li><a href="https://minikube.sigs.k8s.io/docs/start/" target="_blank" rel="noopener">minikube</a></li>
+      <li><a href="https://helm.sh/docs/" target="_blank" rel="noopener">Helm 공식 문서</a></li>
+      <li><a href="https://kodekloud.com/" target="_blank" rel="noopener">KodeKloud (실습 위주 강의)</a></li>
+      <li><a href="https://argo-cd.readthedocs.io/en/stable/" target="_blank" rel="noopener">Argo CD 문서</a></li>
+      <li><a href="https://killer.sh/" target="_blank" rel="noopener">killer.sh (실전 시나리오)</a></li>
+    </ul>
+    <p class="note">체크박스 상태는 이 브라우저에만 저장됩니다. 하루 1–2시간 기준으로 3–4주면 01–05단계를 실습까지 마칠 수 있는 분량입니다. 순서보다 "직접 배포해보는 것"이 이해를 훨씬 빠르게 합니다.</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var KEY = 'k8s-roadmap-progress-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('ul.res input[type="checkbox"]'));
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { state = {}; }
+
+  function updateProgress(){
+    var total = boxes.length;
+    var checked = boxes.filter(function(b){ return b.checked; }).length;
+    var pct = total ? Math.round((checked/total)*100) : 0;
+    document.getElementById('progressNum').textContent = pct + '%';
+    document.getElementById('progressFill').style.width = pct + '%';
+  }
+
+  boxes.forEach(function(b){
+    var id = b.getAttribute('data-id');
+    if (state[id]) { b.checked = true; b.closest('label').classList.add('checked'); }
+    b.addEventListener('change', function(){
+      state[id] = b.checked;
+      b.closest('label').classList.toggle('checked', b.checked);
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+      updateProgress();
+    });
+  });
+
+  updateProgress();
+})();
+</script>
+</body>
+</html>
