@@ -1,0 +1,428 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>깃에서 클러스터까지</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#f5f7fb; --surface:#ffffff; --surface-2:#eef1f8;
+    --ink:#101a30; --ink-dim:#5b6780; --line:#dde3ee;
+    --accent:#2f5fd6; --accent-ink:#1c3d94; --accent-soft:#e6edfc;
+    --teal:#0e8f82; --teal-soft:#e2f5f2;
+    --warn:#b4720f; --warn-soft:#fbf0dd;
+    --danger:#c23b3b; --danger-soft:#fbe9e9;
+    --shadow: 0 1px 2px rgba(16,26,48,0.04), 0 8px 24px rgba(16,26,48,0.06);
+    --term-bg:#0d1220; --term-ink:#e6ecff; --term-dim:#7686b8; --term-line:#232c47;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1220; --surface:#121b2e; --surface-2:#182339;
+      --ink:#e8edf8; --ink-dim:#93a1c0; --line:#26324c;
+      --accent:#7fa2ff; --accent-ink:#bccdff; --accent-soft:#1b2848;
+      --teal:#4fd3c4; --teal-soft:#12302c;
+      --warn:#e0ad5f; --warn-soft:#3a2e15;
+      --danger:#f0908f; --danger-soft:#3a1c1c;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1220; --surface:#121b2e; --surface-2:#182339;
+    --ink:#e8edf8; --ink-dim:#93a1c0; --line:#26324c;
+    --accent:#7fa2ff; --accent-ink:#bccdff; --accent-soft:#1b2848;
+    --teal:#4fd3c4; --teal-soft:#12302c;
+    --warn:#e0ad5f; --warn-soft:#3a2e15;
+    --danger:#f0908f; --danger-soft:#3a1c1c;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"IBM Plex Sans KR","IBM Plex Sans",system-ui,sans-serif;
+    padding:0 20px; padding-block:40px;
+  }
+  img{ max-width:100%; }
+  [hidden]{ display:none!important; }
+  .wrap{ max-width:820px; margin:0 auto; }
+  h1,h2{ font-family:"Manrope",system-ui,sans-serif; text-wrap:balance; margin:0; }
+
+  .eyebrow{ font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.08em; color:var(--accent-ink); text-transform:uppercase; margin:0 0 10px; }
+  h1{ font-size:clamp(24px,4vw,32px); font-weight:800; line-height:1.3; }
+  .sub{ margin-top:10px; color:var(--ink-dim); font-size:15px; line-height:1.65; max-width:62ch; }
+
+  .state-bar{ margin-top:22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--teal-soft); border:1px solid var(--line); border-radius:12px; padding:12px 16px; font-size:13.5px; color:var(--ink); }
+  .state-bar .dot{ width:8px; height:8px; border-radius:50%; background:var(--teal); flex-shrink:0; box-shadow:0 0 0 3px color-mix(in srgb, var(--teal) 25%, transparent); }
+  .state-bar code{ font-family:"IBM Plex Mono",monospace; font-size:12px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .progress-row{ margin-top:18px; display:flex; align-items:center; gap:12px; }
+  .progress-track{ flex:1; height:8px; border-radius:999px; background:var(--surface-2); overflow:hidden; border:1px solid var(--line); }
+  .progress-fill{ height:100%; background:linear-gradient(90deg,var(--accent),var(--teal)); width:0%; transition:width .3s ease; }
+  #progressNum{ font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--accent-ink); white-space:nowrap; }
+
+  .timeline{ margin-top:36px; }
+  .step{ display:grid; grid-template-columns:44px 1fr; gap:16px; position:relative; padding-bottom:30px; }
+  .step:last-child{ padding-bottom:0; }
+  .rail{ display:flex; flex-direction:column; align-items:center; }
+  .rail .dot{ width:34px; height:34px; border-radius:9px; background:var(--accent-soft); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-family:"IBM Plex Mono",monospace; font-weight:500; font-size:13px; color:var(--accent-ink); flex-shrink:0; transition:background .2s, color .2s; }
+  .step.done .rail .dot{ background:var(--teal); color:#fff; border-color:var(--teal); }
+  .rail .line{ width:2px; flex:1; background:var(--line); margin-top:6px; }
+  .step:last-child .rail .line{ display:none; }
+
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); }
+  .card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .card h2{ font-size:17px; font-weight:700; }
+  .done-toggle{ display:flex; align-items:center; gap:6px; font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-dim); cursor:pointer; user-select:none; white-space:nowrap; }
+  .done-toggle input{ accent-color:var(--teal); width:14px; height:14px; }
+
+  .goal{ margin-top:6px; color:var(--ink-dim); font-size:13.5px; line-height:1.6; }
+
+  .term{ margin-top:14px; background:var(--term-bg); border-radius:10px; overflow:hidden; border:1px solid var(--term-line); }
+  .term .bar{ display:flex; gap:6px; padding:9px 12px; border-bottom:1px solid var(--term-line); }
+  .term .bar span{ width:9px; height:9px; border-radius:50%; background:#42506f; }
+  .term pre{ margin:0; padding:12px 16px 14px; font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--term-ink); line-height:1.65; overflow-x:auto; white-space:pre; }
+  .term .c{ color:#6fcf97; }
+  .term .comment{ color:var(--term-dim); }
+  .term .file{ color:#e8c15a; }
+
+  .explain{ margin-top:14px; border-left:3px solid var(--accent); background:var(--accent-soft); padding:12px 15px; border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .explain b.tag{ display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:6px; }
+  .explain ol, .explain ul{ margin:8px 0 0; padding-left:18px; }
+  .explain li{ margin-bottom:3px; }
+  .explain code{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .warn-box{ margin-top:14px; border-left:3px solid var(--warn); background:var(--warn-soft); padding:12px 15px; border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .warn-box b.tag{ display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--warn); margin-bottom:6px; }
+  .warn-box code{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .check{ margin-top:12px; display:flex; gap:8px; font-size:13px; color:var(--ink-dim); background:var(--surface-2); border-radius:8px; padding:9px 12px; }
+  .check b{ color:var(--teal); font-family:"IBM Plex Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.04em; flex-shrink:0; }
+
+  footer{ margin-top:44px; padding-top:22px; border-top:1px solid var(--line); font-size:13px; color:var(--ink-dim); line-height:1.7; }
+
+  @media (max-width:560px){
+    body{ padding-block:28px; }
+    .step{ grid-template-columns:34px 1fr; gap:10px; }
+    .rail .dot{ width:28px; height:28px; font-size:11px; }
+    .card-head{ flex-direction:column; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">04단계 실습</p>
+    <h1>깃에서 클러스터까지</h1>
+    <p class="sub">지금까지는 <code style="font-family:'IBM Plex Mono',monospace;font-size:13px;">docker build</code>부터 <code style="font-family:'IBM Plex Mono',monospace;font-size:13px;">kubectl apply</code>까지 전부 손으로 했습니다. 이번엔 Helm으로 매니페스트를 패키징하고, GitHub Actions가 이미지를 빌드해서 실제 레지스트리(ghcr.io)에 올리고, ArgoCD가 그 결과를 클러스터에 자동으로 동기화하는 흐름을 실제 저장소로 구성합니다.</p>
+
+    <div class="state-bar">
+      <span class="dot"></span>
+      저장소 <code>github.com/GulSam00/k8s_practice</code> (branch <code>main</code>)를 그대로 씁니다. 앱 경로는 <code>02/frontend-practice</code>.
+    </div>
+
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <span id="progressNum">0 / 10</span>
+    </div>
+  </header>
+
+  <div class="timeline" id="timeline">
+
+    <div class="step" data-step="1">
+      <div class="rail"><div class="dot">1</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>Helm 설치 확인</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">Helm 자체는 클러스터에 뭘 설치하는 게 아니라, 로컬에 까는 CLI 도구입니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> brew install helm
+<span class="c">$</span> helm version</pre></div>
+        <div class="explain">
+          <b class="tag">Helm이 뭔데</b>
+          지금까지 여러 YAML 파일(<code>frontend-deployment.yaml</code>, <code>frontend-configmap.yaml</code>...)을 따로따로 <code>kubectl apply</code>했습니다. Helm은 이 파일들을 **하나의 배포 단위(차트)**로 묶고, <code>values.yaml</code> 하나로 이미지 태그·replica 수 같은 값을 전부 파라미터화합니다. 지난번 얘기했던 비유 그대로 — <b>설정 가능한 npm 패키지</b>에 가깝습니다. <code>package.json</code>이 <code>Chart.yaml</code>, <code>.env</code>가 <code>values.yaml</code> 포지션입니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="2">
+      <div class="rail"><div class="dot">2</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>기존 리소스를 Helm 차트로 변환</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">02단계에서 만든 Deployment/Service를 템플릿화합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="comment"># 04/frontend-chart/Chart.yaml</span>
+apiVersion: v2
+name: frontend-practice
+description: frontend-practice Helm chart
+version: 0.1.0
+appVersion: "1.0"
+
+<span class="comment"># 04/frontend-chart/values.yaml</span>
+replicaCount: 2
+image:
+  repository: ghcr.io/gulsam00/frontend-practice
+  tag: v2
+  pullPolicy: IfNotPresent
+config:
+  apiBaseUrl: "http://backend-mock-service/api"
+
+<span class="comment"># 04/frontend-chart/templates/deployment.yaml</span>
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: frontend
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: API_BASE_URL
+              value: {{ .Values.config.apiBaseUrl | quote }}
+          ports:
+            - containerPort: 80
+
+<span class="comment"># 04/frontend-chart/templates/service.yaml</span>
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-service
+spec:
+  selector:
+    app: {{ .Release.Name }}
+  ports:
+    - port: 80
+      targetPort: 80</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>{{ .Values.xxx }}</code>는 Go 템플릿 문법입니다. <code>helm install</code>/<code>upgrade</code> 시점에 <code>values.yaml</code>(또는 <code>--set</code> 플래그)의 실제 값으로 치환된 뒤, 그 결과가 평범한 k8s YAML이 되어 API 서버로 전송됩니다. <code>{{ .Release.Name }}</code>는 우리가 <code>helm install</code>할 때 붙이는 릴리스 이름이 자동으로 들어갑니다 — 오브젝트 이름을 하드코딩 안 해도 되는 이유.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="3">
+      <div class="rail"><div class="dot">3</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>Helm으로 배포 전환</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">기존 kubectl 리소스를 지우고, 같은 걸 Helm 릴리스로 다시 띄웁니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl delete deploy,svc frontend-practice
+<span class="c">$</span> helm install frontend-practice ./04/frontend-chart
+<span class="c">$</span> helm list
+<span class="c">$</span> kubectl get pods -l app=frontend-practice</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>helm install</code>은 템플릿을 렌더링해서 만든 YAML을 내부적으로 <code>kubectl apply</code>와 똑같이 API 서버에 보냅니다 — 그 뒤 Deployment 컨트롤러, ReplicaSet 컨트롤러, scheduler, kubelet이 하는 일은 지금까지 배운 것과 **완전히 동일**합니다. 달라진 건 오직 "그 YAML을 누가, 어떻게 만들어서 보냈느냐"뿐입니다. 추가로 Helm은 이 배포를 <b>릴리스(release)</b>라는 단위로 추적해서, <code>helm rollback frontend-practice 1</code>처럼 이전 상태로 되돌리는 것도 지원합니다 (Deployment 자체의 리비전 히스토리와는 별개로, Helm 레벨의 히스토리입니다).
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="4">
+      <div class="rail"><div class="dot">4</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>GitHub Actions 워크플로 작성</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">push할 때마다 이미지를 자동으로 빌드해서 ghcr.io로 올리는 파이프라인을 만듭니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="comment"># .github/workflows/build.yml (저장소 루트 기준 경로 고정)</span>
+name: build-and-push
+on:
+  push:
+    branches: [main]
+    paths:
+      - '02/frontend-practice/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./02/frontend-practice
+          push: true
+          tags: ghcr.io/gulsam00/frontend-practice:${{ github.sha }}</pre></div>
+        <div class="warn-box">
+          <b class="tag">여기서 자주 터지는 함정</b>
+          이미지 이름이 <code>ghcr.io/gulsam00/...</code>로 **전부 소문자**인 걸 확인하세요. Docker 레지스트리 규격상 이미지 이름은 반드시 소문자여야 하는데, 저장소 계정이 <code>GulSam00</code>처럼 대문자가 섞여 있으면 <code>${{ github.repository_owner }}</code>를 그대로 쓰다가 빌드 단계에서 "invalid reference format" 에러가 납니다. 그래서 여기선 직접 소문자로 하드코딩했습니다.
+        </div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>secrets.GITHUB_TOKEN</code>은 우리가 따로 만들 필요 없이 **Actions가 실행될 때마다 자동으로 발급**되는 임시 토큰입니다. <code>permissions.packages: write</code>를 선언해줘야 이 토큰으로 ghcr.io에 푸시할 권한이 생깁니다. <code>paths</code> 필터 덕분에 <code>02/frontend-practice/</code> 밖의 파일(예: 이 아티팩트용 설명 파일)만 바뀌면 워크플로가 아예 실행되지 않습니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="5">
+      <div class="rail"><div class="dot">5</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>푸시해서 파이프라인 실행</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">실제로 커밋을 올려서 파이프라인이 도는 걸 확인합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> git add .github/workflows/build.yml 04/
+<span class="c">$</span> git commit -m "add helm chart and ci pipeline"
+<span class="c">$</span> git push origin main
+<span class="c">$</span> gh run watch</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>git push</code>가 GitHub에 새 커밋을 전달하는 순간, GitHub 서버가 <code>.github/workflows/build.yml</code>의 <code>on.push</code> 조건과 매치되는 걸 확인하고 **GitHub이 관리하는 임시 우분투 가상머신**을 하나 띄워 워크플로를 실행합니다. 이 가상머신 안에서 우리 저장소를 체크아웃하고, 02단계에서 우리가 손으로 했던 <code>docker build</code> + 레지스트리 로그인 + 푸시를 그대로 자동 수행합니다. <code>gh run watch</code>(GitHub CLI)로 실시간 로그를 터미널에서 볼 수 있습니다. 없으면 저장소의 Actions 탭에서 확인하세요.
+        </div>
+        <div class="check"><b>확인</b> 저장소의 <b>Packages</b> 탭(또는 <code>https://github.com/GulSam00?tab=packages</code>)에 <code>frontend-practice</code> 패키지가 새로 생겼는지 확인하세요.</div>
+      </div>
+    </div>
+
+    <div class="step" data-step="6">
+      <div class="rail"><div class="dot">6</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>패키지 공개 설정</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">kind 클러스터가 별도 인증 없이 이미지를 받아올 수 있게 합니다.</p>
+        <div class="warn-box">
+          <b class="tag">왜 필요한가</b>
+          <code>GITHUB_TOKEN</code>으로 올린 패키지는 기본적으로 **비공개**입니다. 우리 kind 클러스터엔 ghcr.io 인증 정보가 없어서, 이 상태로는 <code>ImagePullBackOff</code>가 납니다(02단계 때와 원인은 다르지만 증상은 같습니다 — 이번엔 "로컬에 이미지가 없어서"가 아니라 "인증이 없어서"). 학습용으로 가장 간단한 해결은 패키지를 공개로 바꾸는 것입니다.
+        </div>
+        <div class="explain">
+          <b class="tag">해결 방법</b>
+          GitHub 저장소 → <b>Packages</b> 탭 → <code>frontend-practice</code> 클릭 → <b>Package settings</b> → <b>Change visibility</b> → <b>Public</b>. (실무의 사설 레지스트리라면 대신 <code>kubectl create secret docker-registry</code>로 <code>imagePullSecrets</code>를 만들어 Deployment에 연결하는 방식을 씁니다 — 지금은 학습 목적상 더 간단한 공개 전환으로 갑니다.)
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="7">
+      <div class="rail"><div class="dot">7</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>새 이미지로 Helm 업그레이드</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">이번엔 kind load 없이, 진짜 레지스트리에서 이미지를 받아옵니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> git log -1 --format=%H
+<span class="comment"># 위에서 나온 커밋 해시를 태그로 사용</span>
+<span class="c">$</span> helm upgrade frontend-practice ./04/frontend-chart \
+    --set image.tag=&lt;커밋-해시&gt;
+<span class="c">$</span> kubectl get pods -l app=frontend-practice -o wide
+<span class="c">$</span> kubectl describe pod &lt;새-pod-이름&gt; | grep -A3 Events</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나 — 02단계와 정반대 상황</b>
+          02단계에서는 <code>kind load docker-image</code>로 로컬 이미지를 강제로 노드에 밀어넣어야 했습니다. 이번엔 이미지가 **실제 ghcr.io 레지스트리**에 있으므로, kubelet이 <code>Pulling image "ghcr.io/gulsam00/frontend-practice:..."</code>를 시도해서 **인터넷을 통해 정식으로 pull**해옵니다. <code>describe pod</code>의 Events에 <code>Pulling</code>/<code>Pulled</code>가 찍히는 걸 보면, 이번엔 로컬 캐시가 아니라 진짜 원격에서 받아왔다는 게 확인됩니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="8">
+      <div class="rail"><div class="dot">8</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>ArgoCD 설치</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">"Git 저장소 상태 = 클러스터가 유지해야 할 상태"를 대신 감시해줄 컨트롤러를 설치합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl create namespace argocd
+<span class="c">$</span> kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+<span class="c">$</span> kubectl wait --namespace argocd \
+    --for=condition=available deployment/argocd-server \
+    --timeout=180s</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          지금까지는 우리가 직접 <code>helm upgrade</code>를 실행해야 클러스터가 바뀌었습니다. ArgoCD는 그 역할을 **컨트롤러**가 대신하게 만듭니다 — 01단계에서 배운 "지켜보다가 차이나면 스스로 반응하는" 패턴을, "Pod 개수"가 아니라 "**Git 저장소의 내용**"을 대상으로 적용하는 겁니다. 설치되는 구성요소도 지난번 ingress-nginx와 비슷한 패턴입니다: 여러 컨트롤러 Pod, RBAC, 그리고 자체 UI/API 서버.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="9">
+      <div class="rail"><div class="dot">9</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>Application 등록 — GitOps 관찰하기</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">Git 저장소를 가리키는 Application을 만들고, 자동 동기화를 직접 눈으로 봅니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="file"># frontend-argo-app.yaml</span>
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: frontend-practice
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/GulSam00/k8s_practice.git
+    targetRevision: main
+    path: 04/frontend-chart
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+
+<span class="c">$</span> kubectl apply -f frontend-argo-app.yaml
+<span class="c">$</span> kubectl get application -n argocd</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>Application</code>도 그냥 또 하나의 커스텀 리소스(CRD)입니다 — 예전에 배운 것처럼, ArgoCD가 설치되면서 <code>kind: Application</code>이라는 새 타입을 클러스터에 등록해둔 겁니다. ArgoCD 컨트롤러가 이 오브젝트를 watch하다가, <code>repoURL</code>의 <code>04/frontend-chart</code> 경로(우리가 2단계에서 만든 Helm 차트)를 주기적으로 확인합니다. <code>selfHeal: true</code>이면, 누군가 <code>kubectl</code>로 클러스터를 직접 고쳐도(Git과 어긋나면) ArgoCD가 **Git 상태로 되돌립니다** — 09단계에서 겪었던 "Pod를 지워도 ReplicaSet이 되살리는" 것과 똑같은 원리가, 이번엔 "누가 클러스터를 손으로 고쳐도 Git 상태로 되돌린다"는 훨씬 큰 스케일로 적용된 겁니다.
+        </div>
+        <div class="check"><b>확인</b> <code>kubectl port-forward svc/argocd-server -n argocd 8081:443</code> 후 <code>https://localhost:8081</code> 접속(초기 admin 비밀번호는 <code>kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d</code>)해서 UI로도 동기화 상태를 확인해보세요.</div>
+      </div>
+    </div>
+
+    <div class="step" data-step="10">
+      <div class="rail"><div class="dot">10</div></div>
+      <div class="card">
+        <div class="card-head"><h2>정리</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">이번 단계에서 만든 것들을 정리합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl delete -f frontend-argo-app.yaml
+<span class="c">$</span> kubectl delete namespace argocd
+<span class="c">$</span> helm uninstall frontend-practice</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>helm uninstall</code>은 이 릴리스가 만들었던 오브젝트를 전부 역순으로 지웁니다 (Helm이 릴리스 단위로 "내가 뭘 만들었는지" 추적하고 있기 때문에 가능한 일). GitHub Actions 워크플로와 ghcr.io 이미지는 저장소/계정에 남아있어도 무방합니다 — 다음에 다시 <code>helm install</code>하면 그대로 재사용됩니다.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <code>ImagePullBackOff</code>가 나면 6단계(패키지 공개 설정)를 확인하시고, <code>invalid reference format</code>이 뜨면 4단계의 소문자 이미지 이름 함정을 다시 보세요. ArgoCD Application이 계속 <code>OutOfSync</code>면 <code>kubectl describe application frontend-practice -n argocd</code>의 마지막 이벤트를 확인하세요.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var KEY = 'k8s-phase4-progress-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.step-check'));
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { state = {}; }
+
+  function update(){
+    var total = boxes.length;
+    var checked = boxes.filter(function(b){ return b.checked; }).length;
+    document.getElementById('progressNum').textContent = checked + ' / ' + total;
+    document.getElementById('progressFill').style.width = (total ? (checked/total*100) : 0) + '%';
+  }
+
+  boxes.forEach(function(b, i){
+    var id = 'step-' + i;
+    if (state[id]) { b.checked = true; b.closest('.step').classList.add('done'); }
+    b.addEventListener('change', function(){
+      state[id] = b.checked;
+      b.closest('.step').classList.toggle('done', b.checked);
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+      update();
+    });
+  });
+  update();
+})();
+</script>
+</body>
+</html>

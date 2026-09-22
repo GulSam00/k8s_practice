@@ -1,0 +1,47 @@
+# backend-mock.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-mock-html
+data:
+  index.html: |
+    {"message": "hello from backend-mock"}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-mock
+  labels:
+    app: backend-mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-mock
+  template:
+    metadata:
+      labels:
+        app: backend-mock
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+          ports:
+            - containerPort: 80
+      volumes:
+        - name: html
+          configMap:
+            name: backend-mock-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-mock-service
+spec:
+  selector:
+    app: backend-mock
+  ports:
+    - port: 80
