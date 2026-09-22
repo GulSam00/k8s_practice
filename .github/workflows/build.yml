@@ -2,8 +2,6 @@ name: build-and-push
 on:
   push:
     branches: [main]
-    paths:
-      - "02/frontend-practice/**"
 
 jobs:
   build:
