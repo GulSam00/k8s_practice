@@ -1,0 +1,19 @@
+# frontend-argo-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: frontend-practice
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/GulSam00/k8s_practice.git
+    targetRevision: main
+    path: 04/frontend-chart
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
