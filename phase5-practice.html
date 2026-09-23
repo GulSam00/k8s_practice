@@ -1,0 +1,426 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>죽여보고 배우기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#f5f7fb; --surface:#ffffff; --surface-2:#eef1f8;
+    --ink:#101a30; --ink-dim:#5b6780; --line:#dde3ee;
+    --accent:#2f5fd6; --accent-ink:#1c3d94; --accent-soft:#e6edfc;
+    --teal:#0e8f82; --teal-soft:#e2f5f2;
+    --warn:#b4720f; --warn-soft:#fbf0dd;
+    --danger:#c23b3b; --danger-soft:#fbe9e9;
+    --shadow: 0 1px 2px rgba(16,26,48,0.04), 0 8px 24px rgba(16,26,48,0.06);
+    --term-bg:#0d1220; --term-ink:#e6ecff; --term-dim:#7686b8; --term-line:#232c47;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1220; --surface:#121b2e; --surface-2:#182339;
+      --ink:#e8edf8; --ink-dim:#93a1c0; --line:#26324c;
+      --accent:#7fa2ff; --accent-ink:#bccdff; --accent-soft:#1b2848;
+      --teal:#4fd3c4; --teal-soft:#12302c;
+      --warn:#e0ad5f; --warn-soft:#3a2e15;
+      --danger:#f0908f; --danger-soft:#3a1c1c;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1220; --surface:#121b2e; --surface-2:#182339;
+    --ink:#e8edf8; --ink-dim:#93a1c0; --line:#26324c;
+    --accent:#7fa2ff; --accent-ink:#bccdff; --accent-soft:#1b2848;
+    --teal:#4fd3c4; --teal-soft:#12302c;
+    --warn:#e0ad5f; --warn-soft:#3a2e15;
+    --danger:#f0908f; --danger-soft:#3a1c1c;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.4);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"IBM Plex Sans KR","IBM Plex Sans",system-ui,sans-serif;
+    padding:0 20px; padding-block:40px;
+  }
+  img{ max-width:100%; }
+  [hidden]{ display:none!important; }
+  .wrap{ max-width:820px; margin:0 auto; }
+  h1,h2{ font-family:"Manrope",system-ui,sans-serif; text-wrap:balance; margin:0; }
+
+  .eyebrow{ font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.08em; color:var(--accent-ink); text-transform:uppercase; margin:0 0 10px; }
+  h1{ font-size:clamp(24px,4vw,32px); font-weight:800; line-height:1.3; }
+  .sub{ margin-top:10px; color:var(--ink-dim); font-size:15px; line-height:1.65; max-width:62ch; }
+
+  .state-bar{ margin-top:22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--teal-soft); border:1px solid var(--line); border-radius:12px; padding:12px 16px; font-size:13.5px; color:var(--ink); }
+  .state-bar .dot{ width:8px; height:8px; border-radius:50%; background:var(--teal); flex-shrink:0; box-shadow:0 0 0 3px color-mix(in srgb, var(--teal) 25%, transparent); }
+  .state-bar code{ font-family:"IBM Plex Mono",monospace; font-size:12px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .progress-row{ margin-top:18px; display:flex; align-items:center; gap:12px; }
+  .progress-track{ flex:1; height:8px; border-radius:999px; background:var(--surface-2); overflow:hidden; border:1px solid var(--line); }
+  .progress-fill{ height:100%; background:linear-gradient(90deg,var(--accent),var(--teal)); width:0%; transition:width .3s ease; }
+  #progressNum{ font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--accent-ink); white-space:nowrap; }
+
+  .timeline{ margin-top:36px; }
+  .step{ display:grid; grid-template-columns:44px 1fr; gap:16px; position:relative; padding-bottom:30px; }
+  .step:last-child{ padding-bottom:0; }
+  .rail{ display:flex; flex-direction:column; align-items:center; }
+  .rail .dot{ width:34px; height:34px; border-radius:9px; background:var(--accent-soft); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-family:"IBM Plex Mono",monospace; font-weight:500; font-size:13px; color:var(--accent-ink); flex-shrink:0; transition:background .2s, color .2s; }
+  .step.done .rail .dot{ background:var(--teal); color:#fff; border-color:var(--teal); }
+  .rail .line{ width:2px; flex:1; background:var(--line); margin-top:6px; }
+  .step:last-child .rail .line{ display:none; }
+
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); }
+  .card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .card h2{ font-size:17px; font-weight:700; }
+  .done-toggle{ display:flex; align-items:center; gap:6px; font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-dim); cursor:pointer; user-select:none; white-space:nowrap; }
+  .done-toggle input{ accent-color:var(--teal); width:14px; height:14px; }
+
+  .goal{ margin-top:6px; color:var(--ink-dim); font-size:13.5px; line-height:1.6; }
+
+  .term{ margin-top:14px; background:var(--term-bg); border-radius:10px; overflow:hidden; border:1px solid var(--term-line); }
+  .term .bar{ display:flex; gap:6px; padding:9px 12px; border-bottom:1px solid var(--term-line); }
+  .term .bar span{ width:9px; height:9px; border-radius:50%; background:#42506f; }
+  .term pre{ margin:0; padding:12px 16px 14px; font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--term-ink); line-height:1.65; overflow-x:auto; white-space:pre; }
+  .term .c{ color:#6fcf97; }
+  .term .comment{ color:var(--term-dim); }
+  .term .file{ color:#e8c15a; }
+
+  .explain{ margin-top:14px; border-left:3px solid var(--accent); background:var(--accent-soft); padding:12px 15px; border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .explain b.tag{ display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:6px; }
+  .explain ol, .explain ul{ margin:8px 0 0; padding-left:18px; }
+  .explain li{ margin-bottom:3px; }
+  .explain code{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .warn-box{ margin-top:14px; border-left:3px solid var(--warn); background:var(--warn-soft); padding:12px 15px; border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .warn-box b.tag{ display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--warn); margin-bottom:6px; }
+  .warn-box code{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .danger-box{ margin-top:14px; border-left:3px solid var(--danger); background:var(--danger-soft); padding:12px 15px; border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .danger-box b.tag{ display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--danger); margin-bottom:6px; }
+  .danger-box code{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; background:var(--surface); padding:1px 5px; border-radius:4px; border:1px solid var(--line); }
+
+  .check{ margin-top:12px; display:flex; gap:8px; font-size:13px; color:var(--ink-dim); background:var(--surface-2); border-radius:8px; padding:9px 12px; }
+  .check b{ color:var(--teal); font-family:"IBM Plex Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.04em; flex-shrink:0; }
+
+  footer{ margin-top:44px; padding-top:22px; border-top:1px solid var(--line); font-size:13px; color:var(--ink-dim); line-height:1.7; }
+
+  @media (max-width:560px){
+    body{ padding-block:28px; }
+    .step{ grid-template-columns:34px 1fr; gap:10px; }
+    .rail .dot{ width:28px; height:28px; font-size:11px; }
+    .card-head{ flex-direction:column; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">05단계 실습</p>
+    <h1>죽여보고 배우기</h1>
+    <p class="sub">probe를 일부러 잘못 설정해서 멀쩡한 앱을 재시작 지옥에 빠뜨려보고, 메모리 제한을 너무 낮게 잡아서 실제로 OOMKilled를 발생시켜본 다음, 부하를 줘서 HPA가 스스로 Pod를 늘리는 것까지 직접 눈으로 봅니다. 읽어서 아는 것과, 원인 메시지를 직접 마주하고 고쳐본 것의 차이를 만드는 게 목표입니다.</p>
+
+    <div class="state-bar">
+      <span class="dot"></span>
+      04단계에서 클러스터를 비웠으므로, 1단계에서 앱을 다시 배포합니다. 이미지는 <code>ghcr.io/gulsam00/frontend-practice</code> (04단계에서 검증된 public 이미지)를 그대로 씁니다.
+    </div>
+
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <span id="progressNum">0 / 9</span>
+    </div>
+  </header>
+
+  <div class="timeline" id="timeline">
+
+    <div class="step" data-step="1">
+      <div class="rail"><div class="dot">1</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>앱 다시 배포</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">이번 단계는 Helm/ArgoCD 없이 순수 kubectl로 진행합니다 — probe/resource 개념에만 집중하기 위해서입니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="file"># 05/frontend-deployment.yaml</span>
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-practice
+  labels:
+    app: frontend-practice
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-practice
+  template:
+    metadata:
+      labels:
+        app: frontend-practice
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/gulsam00/frontend-practice:ca843471503d2e77f2ca91ea4295dba185714424
+          ports:
+            - containerPort: 80
+
+<span class="comment"># 05/frontend-service.yaml — 02단계와 동일</span>
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend-practice
+  ports:
+    - port: 80
+
+<span class="c">$</span> kubectl apply -f 05/frontend-deployment.yaml -f 05/frontend-service.yaml
+<span class="c">$</span> kubectl get pods -l app=frontend-practice</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          이 이미지는 04단계에서 이미 ghcr.io에 올라가 있고 패키지도 public으로 바꿔둔 상태라, <code>kind load</code> 없이도 바로 pull됩니다. probe나 resource 필드는 아직 하나도 없는 "제일 기본적인" Deployment로 시작해서, 이후 단계마다 하나씩 추가해나갑니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="2">
+      <div class="rail"><div class="dot">2</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>Liveness / Readiness probe 추가</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">"살아있다"와 "요청 받을 준비가 됐다"가 서로 다른 질문이라는 걸 코드로 표현합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="comment"># frontend-deployment.yaml의 containers 아래 추가</span>
+      containers:
+        - name: frontend
+          image: ghcr.io/gulsam00/frontend-practice:ca843471503d2e77f2ca91ea4295dba185714424
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 1
+            periodSeconds: 3
+
+<span class="c">$</span> kubectl apply -f 05/frontend-deployment.yaml</pre></div>
+        <div class="explain">
+          <b class="tag">두 probe의 질문이 다릅니다</b>
+          <ul>
+            <li><b>livenessProbe</b>: "이 컨테이너가 죽었나?" — 계속 실패하면 kubelet이 <b>컨테이너를 강제로 재시작</b>시킵니다. 응답 없는 좀비 프로세스를 되살리는 용도.</li>
+            <li><b>readinessProbe</b>: "이 Pod가 지금 트래픽을 받아도 되나?" — 실패해도 Pod를 죽이지 않고, 대신 <b>Service의 Endpoints 목록에서 잠깐 빼버립니다.</b> 시작 중이거나 일시적으로 느려진 Pod로 트래픽이 안 가게 막는 용도.</li>
+          </ul>
+          nginx는 뜨자마자 바로 200을 반환하니 지금은 둘 다 거의 즉시 통과합니다.
+        </div>
+        <div class="check"><b>확인</b> <code>kubectl describe pod &lt;이름&gt;</code>에서 <code>Liveness</code>/<code>Readiness</code> 줄이 보이는지 확인하세요.</div>
+      </div>
+    </div>
+
+    <div class="step" data-step="3">
+      <div class="rail"><div class="dot">3</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>일부러 망가뜨려보기 — probe 오작동</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">"probe 설정이 잘못되면 멀쩡한 앱도 계속 재시작된다"를 직접 겪습니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="comment"># livenessProbe의 path를 존재하지 않는 경로로 변경</span>
+          livenessProbe:
+            httpGet:
+              path: /this-path-does-not-exist
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 1
+
+<span class="c">$</span> kubectl apply -f 05/frontend-deployment.yaml
+<span class="c">$</span> kubectl get pods -l app=frontend-practice -w</pre></div>
+        <div class="warn-box">
+          <b class="tag">무슨 일이 일어나나</b>
+          앱 코드는 전혀 안 바꿨는데(진짜 nginx는 여전히 정상 동작 중), 존재하지 않는 경로를 확인하는 probe가 계속 404를 받고 "죽었다"고 오판합니다. <code>failureThreshold: 1</code>이라 한 번만 실패해도 바로 재시작 — <code>RESTARTS</code> 카운트가 계속 올라가는 걸 보게 될 겁니다. 실제로 5xx를 내는 진짜 장애와, 이런 **probe 오설정으로 인한 가짜 장애**를 구분하는 게 운영에서 중요한 이유입니다.
+        </div>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl describe pod &lt;재시작 중인 pod&gt; | grep -A5 Events</pre></div>
+        <div class="explain">
+          <b class="tag">확인 후 원복</b>
+          Events에 <code>Liveness probe failed: HTTP probe failed with statuscode: 404</code>가 반복되는 걸 확인했으면, <code>path</code>를 다시 <code>/</code>로 되돌리고 <code>failureThreshold</code>도 기본값(3)으로 돌려서 재적용하세요.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="4">
+      <div class="rail"><div class="dot">4</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>Resource requests/limits 추가</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">이 컨테이너가 얼마나 쓸 거라고 선언하는지, 그리고 그 선언이 두 가지 다른 일을 한다는 걸 봅니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="comment"># containers 아래 추가</span>
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"</pre></div>
+        <div class="explain">
+          <b class="tag">requests와 limits는 쓰이는 곳이 다릅니다</b>
+          <ul>
+            <li><b>requests</b>: scheduler가 노드를 고를 때 "이 노드에 이만큼 여유가 있나?"를 판단하는 기준(01단계에서 배운 scheduler의 배치 알고리즘이 실제로 보는 숫자입니다). Pod가 뜬 뒤에는 강제하지 않습니다.</li>
+            <li><b>limits</b>: 실제로 이 이상 못 쓰게 커널이 강제하는 상한. CPU는 초과하면 그냥 느려지고(throttling), <b>메모리는 초과하면 프로세스가 강제 종료됩니다</b> — 다음 단계에서 직접 봅니다.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="5">
+      <div class="rail"><div class="dot">5</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>OOMKilled 직접 발생시키기</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">메모리 limit을 실제 필요량보다 낮게 잡아서, 컨테이너가 강제 종료되는 걸 직접 봅니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="comment"># limits.memory를 nginx가 뜨기에도 부족한 수준으로</span>
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "8Mi"
+            limits:
+              cpu: "100m"
+              memory: "8Mi"
+
+<span class="c">$</span> kubectl apply -f 05/frontend-deployment.yaml
+<span class="c">$</span> kubectl get pods -l app=frontend-practice -w</pre></div>
+        <div class="danger-box">
+          <b class="tag">무슨 일이 일어나나</b>
+          nginx가 여러 워커 프로세스를 띄우는 데 8Mi로는 부족합니다. 커널의 cgroup 메모리 제한에 걸리는 순간, 리눅스가 그 컨테이너의 프로세스를 <b>강제로 죽입니다(OOM Killer)</b>. <code>kubectl get pods</code>의 <code>STATUS</code>가 <code>OOMKilled</code>로 뜨는 걸 볼 수 있을 겁니다. 이건 probe가 죽인 게 아니라, **커널이 직접 개입**한 겁니다.
+        </div>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl describe pod &lt;pod 이름&gt; | grep -A5 "Last State"</pre></div>
+        <div class="explain">
+          <b class="tag">확인 포인트</b>
+          <code>Last State: Terminated, Reason: OOMKilled, Exit Code: 137</code>이 보일 겁니다. 종료 코드 <b>137은 128+9</b>로, 리눅스 시그널 9(<code>SIGKILL</code>)를 받고 즉사했다는 뜻입니다 — probe 실패로 인한 정상 종료(graceful)와 달리, 준비할 시간도 없이 강제 종료됐다는 신호입니다. 확인 후 <code>memory</code> 값을 4단계의 <code>32Mi/64Mi</code>로 되돌리세요.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="6">
+      <div class="rail"><div class="dot">6</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>metrics-server 설치</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">kind에는 이것도 기본으로 없습니다 — HPA와 <code>kubectl top</code>이 이걸 필요로 합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+<span class="c">$</span> kubectl patch deployment metrics-server -n kube-system --type='json' \
+    -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+<span class="c">$</span> kubectl wait --namespace kube-system \
+    --for=condition=available deployment/metrics-server --timeout=120s
+<span class="c">$</span> kubectl top pods</pre></div>
+        <div class="warn-box">
+          <b class="tag">왜 patch가 필요한가</b>
+          metrics-server는 기본적으로 각 노드 kubelet의 인증서를 엄격하게 검증합니다. kind 노드는 로컬 개발용 자체 서명 인증서를 쓰는데, 이게 metrics-server 기본 설정의 신뢰 체인과 안 맞아서 <code>x509: certificate signed by unknown authority</code> 에러가 납니다. <code>--kubelet-insecure-tls</code>는 "로컬 개발 클러스터니까 그 검증은 건너뛰어라"는 kind 환경 전용 우회 설정입니다 (실제 프로덕션 클러스터에서는 보통 필요 없습니다).
+        </div>
+        <div class="check"><b>확인</b> <code>kubectl top pods</code>에서 각 Pod의 실제 CPU/메모리 사용량 숫자가 나오면 성공입니다.</div>
+      </div>
+    </div>
+
+    <div class="step" data-step="7">
+      <div class="rail"><div class="dot">7</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>HPA(자동 스케일러) 만들기</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">10단계에서 손으로 했던 <code>kubectl scale</code>을, 이번엔 CPU 사용률을 보고 자동으로 하게 만듭니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="file"># 05/frontend-hpa.yaml</span>
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend-practice
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
+
+<span class="c">$</span> kubectl apply -f 05/frontend-hpa.yaml
+<span class="c">$</span> kubectl get hpa frontend-hpa</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          HPA도 01단계에서 배운 것과 같은 컨트롤 루프입니다 — 다만 감시 대상이 "Pod 개수"가 아니라 <b>"CPU 사용률"</b>입니다. <code>scaleTargetRef</code>로 어떤 Deployment를 조절할지 지정하고, metrics-server가 수집한 실제 CPU 사용량이 4단계에서 정한 <code>requests.cpu(50m)</code>의 50%를 넘으면, HPA 컨트롤러가 <code>replicas</code> 필드를 직접 늘립니다 — 그러면 그 뒤는 항상 봐왔던 ReplicaSet 컨트롤러가 처리합니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step="8">
+      <div class="rail"><div class="dot">8</div><div class="line"></div></div>
+      <div class="card">
+        <div class="card-head"><h2>부하를 줘서 스케일 아웃 관찰</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">HPA가 실제로 반응하는 걸 실시간으로 지켜봅니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="comment"># 터미널 A: 부하 생성용 임시 Pod</span>
+<span class="c">$</span> kubectl run load-generator --image=busybox --restart=Never -- \
+    /bin/sh -c "while true; do wget -q -O- http://frontend-service > /dev/null; done"
+
+<span class="comment"># 터미널 B: 지켜보기</span>
+<span class="c">$</span> kubectl get hpa frontend-hpa -w
+<span class="comment"># 터미널 C: 지켜보기</span>
+<span class="c">$</span> kubectl get pods -l app=frontend-practice -w</pre></div>
+        <div class="explain">
+          <b class="tag">무슨 일이 일어나나</b>
+          <code>busybox</code> 하나가 <code>frontend-service</code>에 무한 반복으로 요청을 쏘면서 CPU 사용량을 끌어올립니다. HPA는 기본적으로 15초 간격으로 metrics-server 수치를 확인하는데, <code>TARGETS</code> 컬럼(현재 사용률/목표 사용률)이 50%를 넘어가면 <code>REPLICAS</code>가 2에서 서서히 늘어나는 걸 보게 될 겁니다. 늘어난 만큼 부하가 여러 Pod에 분산되면서 다시 평형점을 찾습니다.
+        </div>
+        <div class="check"><b>확인</b> 다 보셨으면 <code>kubectl delete pod load-generator</code>로 부하 생성기부터 지우세요 — 그래야 그다음 replicas가 서서히 다시 줄어드는(스케일 인) 것도 관찰할 수 있습니다.</div>
+      </div>
+    </div>
+
+    <div class="step" data-step="9">
+      <div class="rail"><div class="dot">9</div></div>
+      <div class="card">
+        <div class="card-head"><h2>정리</h2><label class="done-toggle"><input type="checkbox" class="step-check">완료</label></div>
+        <p class="goal">이번 단계에서 만든 것들을 정리합니다.</p>
+        <div class="term"><div class="bar"><span></span><span></span><span></span></div><pre><span class="c">$</span> kubectl delete pod load-generator --ignore-not-found
+<span class="c">$</span> kubectl delete -f 05/frontend-hpa.yaml
+<span class="c">$</span> kubectl delete -f 05/frontend-deployment.yaml -f 05/frontend-service.yaml
+<span class="comment"># metrics-server는 다음 단계에서도 유용하니 남겨둬도 무방</span></pre></div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    HPA가 15~20초가 지나도 안 움직이면 <code>kubectl describe hpa frontend-hpa</code>의 <code>Events</code>를 먼저 보세요 — <code>unable to get metrics</code>가 찍혀있다면 6단계의 metrics-server 설치나 patch가 제대로 안 됐을 가능성이 큽니다. <code>kubectl top pods</code>가 먼저 정상 동작하는지로 원인을 좁힐 수 있습니다.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var KEY = 'k8s-phase5-progress-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.step-check'));
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { state = {}; }
+
+  function update(){
+    var total = boxes.length;
+    var checked = boxes.filter(function(b){ return b.checked; }).length;
+    document.getElementById('progressNum').textContent = checked + ' / ' + total;
+    document.getElementById('progressFill').style.width = (total ? (checked/total*100) : 0) + '%';
+  }
+
+  boxes.forEach(function(b, i){
+    var id = 'step-' + i;
+    if (state[id]) { b.checked = true; b.closest('.step').classList.add('done'); }
+    b.addEventListener('change', function(){
+      state[id] = b.checked;
+      b.closest('.step').classList.toggle('done', b.checked);
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+      update();
+    });
+  });
+  update();
+})();
+</script>
+</body>
+</html>

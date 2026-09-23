@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-practice
+  labels:
+    app: frontend-practice
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-practice
+  template:
+    metadata:
+      labels:
+        app: frontend-practice
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/gulsam00/frontend-practice:ca843471503d2e77f2ca91ea4295dba185714424
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 1
+            periodSeconds: 3
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
